@@ -31,26 +31,41 @@ account encryption keys, deployment configuration, or MCP server source code.
 The repository is public and can be installed without a GitHub token, SSH
 credentials, MCP token, or Elasticsearch key.
 
-### Automatic plugin installation
+### Install the plugin
 
 Add the public Serpvibe marketplace:
 
 ```bash
 codex plugin marketplace add JiXiangTools/serpvibe-mcp-skills --ref main
+codex plugin add serpvibe-search-stack@serpvibe-plugins
 ```
 
-Restart the ChatGPT desktop app or Codex after adding the marketplace. The
-`serpvibe-search-stack` entry is installed by default. Installation loads all
-four Skills and the `search-stack-mcp` URL from the same package, then starts
-the Auth0 OAuth flow. The resulting access token is short-lived and scoped;
-the MCP server's Elasticsearch API key is never distributed to the client.
+Installation loads all four Skills and the `search-stack-mcp` URL from the same
+package. In the ChatGPT desktop app, install the plugin from the Plugins
+Directory and complete the connection prompt. With Codex CLI, start OAuth
+explicitly after installation:
+
+```bash
+codex mcp login search-stack-mcp \
+  --oauth-client-registration dcr \
+  --scopes account:read,account:write,account:credentials:read,website:read,website:write,task:read,task:write
+```
+
+The resulting access token is short-lived and scoped; the MCP server's
+Elasticsearch API key is never distributed to the client.
 
 The marketplace behavior is declared in `.agents/plugins/marketplace.json`:
 
-- `installation: INSTALLED_BY_DEFAULT` installs the plugin when the marketplace
-  is added or refreshed.
+- `installation: AVAILABLE` exposes the plugin for an explicit, reviewable
+  install.
 - `authentication: ON_INSTALL` asks the host to authenticate the MCP connection
-  during installation.
+  during installation when that host provides an install-time connection UI.
+
+The Auth0 tenant must enable Dynamic Client Registration under
+`Settings > Advanced`. The `serpvibe-mcp` API must also grant all seven scopes
+as the default user-delegated permissions for third-party applications. That
+lets compatible public OAuth clients register themselves without receiving an
+Auth0 secret or the server's Elasticsearch key.
 
 ### Skills-only fallback
 
@@ -87,7 +102,7 @@ Build a complete local plugin directory with all four Skills and the MCP
 connection:
 
 ```bash
-./scripts/package_plugin.sh 0.2.0 \
+./scripts/package_plugin.sh 0.2.1 \
   account_management \
   website_management \
   task_management \

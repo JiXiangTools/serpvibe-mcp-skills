@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "serpvibe-search-stack",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Serpvibe skills and the authenticated Search Stack MCP connection for typed business workflows.",
   "author": {
     "name": "Serpvibe",
