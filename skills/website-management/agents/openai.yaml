@@ -1,0 +1,11 @@
+interface:
+  display_name: "网站管理"
+  short_description: "通过 Search Stack MCP 管理网站目录与受控标签"
+  default_prompt: "使用 $website-management 通过 Search Stack MCP 管理网站目录与受控标签。"
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "search-stack-mcp"
+      description: "Search Stack MCP website_management Workflow"
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "serpvibe-search-stack",
+  "version": "0.1.0",
+  "description": "Serpvibe skills for typed Search Stack MCP business workflows.",
+  "author": {
+    "name": "Serpvibe",
+    "url": "https://github.com/JiXiangTools"
+  },
+  "homepage": "https://github.com/JiXiangTools/serpvibe-mcp-skills",
+  "repository": "https://github.com/JiXiangTools/serpvibe-mcp-skills",
+  "license": "Apache-2.0",
+  "keywords": [
+    "serpvibe",
+    "mcp",
+    "workflow"
+  ]
+}

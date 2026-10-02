@@ -1,0 +1,11 @@
+interface:
+  display_name: "任务管理"
+  short_description: "通过 Search Stack MCP 管理动态任务表、逐行记录与跨任务去重"
+  default_prompt: "使用 $task-management 创建任务表并安全记录逐条处理结果。"
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "search-stack-mcp"
+      description: "Search Stack MCP with the task_management workflow"
+policy:
+  allow_implicit_invocation: true
