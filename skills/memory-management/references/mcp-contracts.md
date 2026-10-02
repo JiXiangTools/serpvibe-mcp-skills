@@ -113,7 +113,7 @@ Only the exact DigitalHuman or an authorized operator may mutate its important m
 
 ## Security and retrieval
 
-- Each Bot uses its own Kibana MCP identity.
+- Each Bot uses its own Search Stack MCP OAuth identity.
 - List and query are always restricted by the exact owner reference.
 - Cross-owner search is unavailable to ordinary Bots.
 - Raw Elasticsearch request tools are not part of the Bot-visible tool surface.

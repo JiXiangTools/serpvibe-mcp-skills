@@ -1,0 +1,20 @@
+{
+  "name": "serpvibe-plugins",
+  "interface": {
+    "displayName": "Serpvibe Plugins"
+  },
+  "plugins": [
+    {
+      "name": "serpvibe-search-stack",
+      "source": {
+        "source": "local",
+        "path": "./"
+      },
+      "policy": {
+        "installation": "INSTALLED_BY_DEFAULT",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

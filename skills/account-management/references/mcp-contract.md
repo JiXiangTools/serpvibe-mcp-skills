@@ -70,7 +70,8 @@ Delete keeps `account_ref`, `digital_human_id`, platform, username, revision, ti
 
 ## Security and logging
 
-- Each caller supplies its own Elasticsearch authorization header; HTTP mode has no shared credential fallback.
-- Elasticsearch index privileges authorize reads and writes. `digital_human_id` does not provide a second application-level authorization boundary.
+- Each HTTP caller supplies an OAuth Bearer Token. The MCP's Elasticsearch service key never leaves the server.
+- Reads require `account:read`; mutations require `account:write`; plaintext password reads additionally require `account:credentials:read`.
+- `digital_human_id` remains account data and does not provide a separate application-level authorization boundary.
 - Passwords and authorization headers must not appear in server logs, error messages, idempotency receipts, or other workflow records.
 - Raw Elasticsearch request tools are not part of the Bot-visible tool surface.

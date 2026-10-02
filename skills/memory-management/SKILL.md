@@ -1,15 +1,15 @@
 ---
 name: memory-management
-description: Manage Role shared memory and DigitalHuman important memory through the Kibana MCP backed by Elasticsearch. Use for explicit memory create, read, update, list, or delete requests; do not use for task records, credentials, runtime sessions, or automatic memory extraction.
+description: Manage Role shared memory and DigitalHuman important memory through the Search Stack MCP backed by Elasticsearch. Use for explicit memory create, read, update, list, or delete requests; do not use for task records, credentials, runtime sessions, or automatic memory extraction.
 ---
 
 # Memory Management
 
-Use Kibana MCP as the only data access path. Elasticsearch is the only writable truth for Role shared-memory entries and DigitalHuman important-memory entries. Do not call legacy memory repositories or keep memory copies in files, prompts, or task records.
+Use `search-stack-mcp` as the only data access path. Elasticsearch is the only writable truth for Role shared-memory entries and DigitalHuman important-memory entries. Do not call legacy memory repositories or keep memory copies in files, prompts, or task records.
 
 ## Required MCP surface
 
-Before the first operation, inspect the connected Kibana MCP tool catalog. Use only:
+Before the first operation, inspect the connected `search-stack-mcp` tool catalog. Use only:
 
 - `serpvibe.role_memory`
 - `serpvibe.digital_human_memory`
@@ -45,4 +45,4 @@ Read [references/mcp-contracts.md](references/mcp-contracts.md) before invoking 
 - This Skill does not change Role identity, Role persona, DigitalHuman identity, or Role membership.
 - Runtime Session and work-history lifecycle remain mechanical and read-only to this Skill.
 - Account passwords and other credentials belong only in the account store and must never enter memory.
-- Skill instructions guide memory decisions; Kibana Workflows and Elasticsearch enforce permissions and consistency.
+- Skill instructions guide memory decisions; Search Stack MCP Workflows and Elasticsearch enforce permissions and consistency.

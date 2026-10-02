@@ -1,17 +1,24 @@
-# Serpvibe Search Stack Skills
+# Serpvibe Search Stack Plugin
 
-Public Agent Plugin package for Serpvibe's typed business workflows.
+Public Agent Plugin that installs Serpvibe's typed business workflow Skills and
+their authenticated MCP connection together.
 
 ## Included skills
 
 - `account-management`: manage encrypted account records.
 - `website-management`: query and maintain the shared website catalog.
 - `task-management`: manage dynamic tasks and row-level processing state.
-- `memory-management`: manage Role and DigitalHuman memory through Kibana MCP.
+- `memory-management`: manage Role and DigitalHuman memory through Search Stack MCP.
 
-The first three skills use the public `search-stack-mcp` connection declared in
-`mcp.json`. `memory-management` requires a separately configured `kibana` MCP
-connection and is not provided by the public Search Stack MCP endpoint.
+All four skills use the public `search-stack-mcp` connection declared in
+`mcp.json`. The account, website, and task workflows are available now. The
+memory skill and its connection can be installed now; memory operations become
+available when the two memory workflows are published by the same MCP service.
+
+The public Search Stack MCP connection uses OAuth 2.1 discovery. Clients receive
+short-lived Bearer Tokens and never receive the MCP server's Elasticsearch API
+key. Account, website, and task read/write permissions are granted as OAuth
+scopes by the service administrator.
 
 ## Repository boundary
 
@@ -21,18 +28,35 @@ account encryption keys, deployment configuration, or MCP server source code.
 
 ## Install in Codex
 
-The repository is public and can be installed without a GitHub token or SSH
-credentials.
+The repository is public and can be installed without a GitHub token, SSH
+credentials, MCP token, or Elasticsearch key.
 
-### Ask Codex to install the skills
+### Automatic plugin installation
 
-Invoke `$skill-installer` and provide this repository:
+Add the public Serpvibe marketplace:
 
-```text
-Install all skills from https://github.com/JiXiangTools/serpvibe-mcp-skills
+```bash
+codex plugin marketplace add JiXiangTools/serpvibe-mcp-skills --ref main
 ```
 
-### Install all four skills from the command line
+Restart the ChatGPT desktop app or Codex after adding the marketplace. The
+`serpvibe-search-stack` entry is installed by default. Installation loads all
+four Skills and the `search-stack-mcp` URL from the same package, then starts
+the Auth0 OAuth flow. The resulting access token is short-lived and scoped;
+the MCP server's Elasticsearch API key is never distributed to the client.
+
+The marketplace behavior is declared in `.agents/plugins/marketplace.json`:
+
+- `installation: INSTALLED_BY_DEFAULT` installs the plugin when the marketplace
+  is added or refreshed.
+- `authentication: ON_INSTALL` asks the host to authenticate the MCP connection
+  during installation.
+
+### Skills-only fallback
+
+Use direct Skill installation only on clients that do not support Agent
+Plugins. This installs the four instruction bundles but cannot install or
+authenticate `mcp.json`:
 
 ```bash
 python3 "${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-installer/scripts/install-skill-from-github.py" \
@@ -44,7 +68,7 @@ python3 "${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-installer/scripts/inst
          skills/memory-management
 ```
 
-### Install one skill
+Install one Skill the same way when only its instructions are needed:
 
 For example, install only `account-management`:
 
@@ -53,22 +77,17 @@ python3 "${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-installer/scripts/inst
   --url https://github.com/JiXiangTools/serpvibe-mcp-skills/tree/main/skills/account-management
 ```
 
-The installer stops instead of overwriting an existing skill directory. Move
-or remove an old installation only after preserving any local changes, then run
-the command again. Newly installed skills are available to Codex on the next
-turn or in a new chat.
-
-Direct Skill installation copies the selected `skills/<name>` directories. It
-does not install the repository-level `mcp.json`. The first three skills still
-require a configured `search-stack-mcp` connection, and `memory-management`
-requires a configured `kibana` MCP connection.
+The direct installer stops instead of overwriting an existing Skill directory.
+All directly installed Skills require a separately configured
+`search-stack-mcp` connection.
 
 ## Package the complete plugin
 
-Build a complete local plugin directory with all four skills:
+Build a complete local plugin directory with all four Skills and the MCP
+connection:
 
 ```bash
-./scripts/package_plugin.sh 0.1.0 \
+./scripts/package_plugin.sh 0.2.0 \
   account_management \
   website_management \
   task_management \

@@ -1,11 +1,11 @@
 interface:
   display_name: "记忆管理"
-  short_description: "通过 Kibana MCP 管理角色共享与数字人重要记忆"
-  default_prompt: "使用 $memory-management 通过 Kibana MCP 管理角色或数字人的记忆。"
+  short_description: "通过 Search Stack MCP 管理角色共享与数字人重要记忆"
+  default_prompt: "使用 $memory-management 通过 Search Stack MCP 管理角色或数字人的记忆。"
 dependencies:
   tools:
     - type: "mcp"
-      value: "kibana"
-      description: "Kibana Agent Builder MCP with Serpvibe memory workflows"
+      value: "search-stack-mcp"
+      description: "Authenticated Search Stack MCP with Serpvibe memory workflows"
 policy:
   allow_implicit_invocation: true

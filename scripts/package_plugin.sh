@@ -47,7 +47,7 @@ for workflow in "$@"; do
         account_management) skill="account-management"; dependency="search-stack-mcp" ;;
         website_management) skill="website-management"; dependency="search-stack-mcp" ;;
         task_management) skill="task-management"; dependency="search-stack-mcp" ;;
-        memory_management) skill="memory-management"; dependency="kibana" ;;
+        memory_management) skill="memory-management"; dependency="search-stack-mcp" ;;
         *) die "no skill mapping for enabled workflow: $workflow" ;;
     esac
     source_dir="$ROOT/skills/$skill"
@@ -57,6 +57,8 @@ for workflow in "$@"; do
     [[ -f "$source_dir/agents/openai.yaml" ]] || die "missing OpenAI metadata for $skill"
     rg -q "value:[[:space:]]*\"$dependency\"" "$source_dir/agents/openai.yaml" \
         || die "$skill does not depend on $dependency"
+    jq -e --arg dependency "$dependency" '.mcpServers[$dependency] != null' "$ROOT/mcp.json" >/dev/null \
+        || die "$skill dependency is missing from mcp.json: $dependency"
     cp -a "$source_dir" "$PACKAGE/skills/$skill"
 done
 

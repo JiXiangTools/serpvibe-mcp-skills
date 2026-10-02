@@ -54,6 +54,7 @@ Use controlled `dimension.value` codes. Query the live tag registry when the app
 
 ## Boundaries
 
+- Read actions require `website:read`; catalog and tag mutations require `website:write`.
 - Website records may contain aliases, name, description, notes, exploration conclusions, controlled tags, quality, traffic observations, and supporting evidence.
 - Keep browser sessions, account credentials, task claims, retries, and complete task history outside website records.
 - Store concise current facts and evidence references, not copied web pages or raw browsing transcripts.
