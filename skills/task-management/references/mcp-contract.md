@@ -4,7 +4,7 @@ This is the required `task_management` Workflow contract. A Task is a dynamic ta
 
 ## Common request and result
 
-Every mutation accepts a caller-generated stable `request_id`. Replaying the same logical request with the same canonical input must return the same completed outcome. Reusing it with different canonical input must return `rejected`.
+Every mutation accepts a caller-generated stable `request_id`. The server retains completed mutation receipts for `TASK_REQUEST_RETENTION_DAYS` (default 30 days, minimum 7). During that window, replaying the same logical request with the same canonical input returns the same completed outcome, while reusing it with different canonical input returns `rejected`. Completed receipts older than the configured window may be pruned, so callers must keep mutation IDs globally unique forever and must never intentionally reuse an expired ID.
 
 Mutations of existing Tasks or Records require `expected_revision`. Successful mutations increment `revision` exactly once. A stale revision returns `conflict` with the current safe projection; it never performs a last-write-wins update.
 
@@ -22,7 +22,7 @@ record_found | record_listed | record_updated | record_deleted
 available | duplicate | busy | lease_lost
 ```
 
-All list operations use bounded pagination and an opaque cursor.
+All list operations use bounded pagination and an opaque cursor. Collection fields such as `tasks`, `records`, and `matches` are always JSON arrays and are returned as `[]` when empty.
 
 ## Task schema
 
@@ -144,9 +144,11 @@ The Workflow derives fingerprints from the Task rule and original values. Caller
 
 The Workflow owns stable IDs, schema validation, dedupe profile compatibility, normalization, claims, lease expiry handling, timestamps, allowed state transitions, revisions, idempotency, recovery, and tombstones.
 
+Administrative retention removes only completed idempotency receipt documents after the configured window. It never removes pending receipts, Tasks, Records, Claims, dedupe profiles, or business tombstones, so retention cannot release a duplicate identity or hide unresolved work.
+
 ## Security and logging
 
-- Each Bot uses its own MCP/Elasticsearch identity. Shared unrestricted API keys are invalid.
-- The Workflow executes with least-privilege access to its fixed index.
+- Each Bot uses its own OAuth-backed MCP identity. The server's Elasticsearch service identity is fixed, restricted to Workflow indices, and never shared with callers.
+- The Workflow executes with least-privilege access to its fixed index, while action scopes authorize each Bot at the MCP boundary.
 - Workflow traces contain request metadata and outcomes, not Authorization, lease references, full values, credentials, or unrestricted payloads.
 - Raw Elasticsearch request tools are not part of the Bot-visible tool surface.

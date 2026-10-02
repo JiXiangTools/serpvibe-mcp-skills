@@ -20,7 +20,7 @@ Read [references/mcp-contract.md](references/mcp-contract.md) before invoking th
 3. For ordinary facts already known to be complete, use `create_record`.
 4. Before an external side effect, use `reserve_record`. Perform the effect only after `record_reserved`, renew a short lease when needed, then call `finish_record` immediately.
 5. Use `check_duplicate` only for inspection. A read-only check is never permission to perform an external effect.
-6. Use a stable `request_id` for each mutation and reuse it after timeouts. For updates, read the current revision unless it is already present in trusted context.
+6. Use one globally unique `request_id` for each mutation and reuse it after timeouts. Never reuse that ID for another mutation, including after the server's completed-receipt retention window has elapsed. For updates, read the current revision unless it is already present in trusted context.
 7. Treat `conflict`, `busy`, `lease_lost`, and `uncertain` as fresh-decision boundaries. Never blindly retry an external effect.
 
 ## Recording rules
@@ -34,6 +34,7 @@ Read [references/mcp-contract.md](references/mcp-contract.md) before invoking th
 
 ## Boundaries
 
+- Read actions require `task:read`; task, record, reservation, and resolution mutations require `task:write`.
 - This Skill manages task data. It does not execute the task, browse websites, receive email, solve challenges, or claim external actions succeeded.
 - External execution requires the appropriate separate tool or Skill and the user's existing authorization.
 - Account credentials, cookies, tokens, private keys, complete website or account documents, runtime sessions, transcripts, and memory do not belong in task records.
