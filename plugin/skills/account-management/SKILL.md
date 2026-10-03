@@ -35,6 +35,7 @@ Inspect the live tool schema for exact fields. Use [references/tool-contract.jso
 - Send passwords as plaintext MCP fields. The server encrypts storage. Credential reads through `get` and `list` always return plaintext passwords.
 - For website registration, login, or password changes, prefer `account_browser`; do not first read a password and copy it into another tool. `account_browser` has no password input or output.
 - Browser page URLs preserve path and query case. They must remain on the account's normalized host; use only `element_ref` values from the latest snapshot.
+- Keep `act` arguments flat: `command` is a sibling of `action`, `operation_ref`, and `action_id`, not a nested object. `navigate` adds `url`; `click` adds `element_ref`; `fill` adds `element_ref` and `text`; `select` adds `element_ref` and `value`.
 - Never use `act.fill` for a password field. Use `inject_credentials`, even if another tool could reveal the password.
 - Treat `act`, `inject_credentials`, and `complete` as external side effects. Never bypass CAPTCHA, email/device verification, or user confirmation.
 - Registration and password change are two-phase operations. Call `complete` only after visible site success. On `reconciliation_required`, re-read the account revision and retry `complete` with that revision; do not generate a second password.

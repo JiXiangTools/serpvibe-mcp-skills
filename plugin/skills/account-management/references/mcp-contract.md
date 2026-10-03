@@ -35,3 +35,8 @@ observes site success and calls `complete`. A revision collision enters
 Browser URLs use resource normalization, so path/query case is preserved, while
 all navigation remains on the account's normalized host. CAPTCHA and human
 verification are never bypassed.
+
+`act` uses a flat request shape. `command` is a top-level sibling of `action`,
+`operation_ref`, and `action_id`: `navigate` requires `url`, `click` requires
+`element_ref`, `fill` requires `element_ref` plus `text`, and `select` requires
+`element_ref` plus `value`. Do not wrap those fields in a nested command object.
