@@ -1,79 +1,18 @@
-# Account management MCP contract
+# Account behavior
 
-This is the required contract for the independent Search Stack MCP tool. Index names, mappings, encryption envelopes, and physical document IDs are server implementation details.
+Exact actions and fields come from [tool-contract.json](tool-contract.json) or the live MCP schema.
 
-## Common request and result
+## Identity and reads
 
-The tool name is `account_management`. It accepts an `action`-tagged object and rejects unknown fields.
+- Website identity is host-only and shared with `website_management`; it ignores scheme, port, path, query, fragment, host case, and trailing dot. `www` remains distinct.
+- Normalized host plus normalized username is globally unique. `account_ref`, URL, and username are immutable.
+- `get` and URL `list` always return plaintext passwords. Credential reads have one permission and one response contract, without a redaction switch.
 
-Every successful mutation is idempotent for its target account. `create`, `update`, and `delete` require a globally unique caller-generated `request_id` containing 1-128 ASCII letters, digits, `_`, `-`, `.`, or `:`. Reuse it only to retry the same logical mutation. Replaying the same ID and canonical input returns the original successful result without incrementing `revision`; reusing that ID with different canonical input returns `rejected / request_id_reused`.
+## Mutations
 
-Existing-record mutations require `expected_revision`. A successful new mutation increments `revision` exactly once. A stale revision returns `conflict / revision_conflict` with `current_revision`.
+- `request_id` is globally unique forever and may be reused only for the identical retry. Changed input returns `rejected / request_id_reused`.
+- Existing-record mutations use revision CAS. A stale revision returns `conflict / revision_conflict`; re-read before deciding.
+- `update` may change only password or `digital_human_id`.
+- `delete` clears the encrypted credential but preserves a permanent identity tombstone.
 
-Every result has `outcome` and `code`. Stable combinations include:
-
-```text
-ok / created | found | listed | updated | deleted
-not_found / account_not_found
-conflict / url_username_exists | revision_conflict
-rejected / request_id_reused
-invalid / <validation_code>
-forbidden / oauth_scope_required
-unavailable / workflow_unavailable
-```
-
-A missing or invalid Bearer Token is rejected by the MCP transport as HTTP `401 / invalid_token`, before the Tool runs. Elasticsearch authorization and connectivity failures are not exposed directly and map to `unavailable / workflow_unavailable`.
-
-All list operations use bounded pagination and an opaque cursor.
-
-## `account_management`
-
-Supported actions:
-
-```text
-create
-  request_id
-  digital_human_id
-  url
-  username
-  password
-
-get
-  account_ref
-  include_password: boolean = true
-
-list
-  url
-  digital_human_id?
-  include_password: boolean = true
-  cursor?
-  limit?
-
-update
-  request_id
-  account_ref
-  expected_revision
-  password?
-  digital_human_id?
-
-delete
-  request_id
-  account_ref
-  expected_revision
-```
-
-One DigitalHuman may own multiple accounts on the same website. The workflow shares site-identity normalization with `website_management`: scheme, port, path, query, fragment, host case, and a trailing dot do not affect website identity. `www` is not removed. This host-only rule must not be used for page/resource URL equality, where path and query remain significant. The normalized host and normalized username pair is globally unique. Creating an existing pair with a different request returns `conflict / url_username_exists`.
-
-`account_ref`, URL, and username are immutable. An update may change the password or `digital_human_id` and always requires revision CAS.
-
-Passwords cross the trusted MCP transport as plaintext request values. The server validates them, encrypts them with AES-256-GCM, and writes only the authenticated envelope to Elasticsearch. Exact `get` and URL `list` decrypt and return matching passwords by default. Passing `include_password=false` omits passwords as a response projection without changing authorization.
-
-Delete keeps `account_ref`, `digital_human_id`, URL identity, username, revision, timestamps, and `deleted_at`, but clears the encrypted credential. The tombstone is not restorable as a usable credential and its identity cannot be reused silently.
-
-## Security and logging
-
-- Each HTTP caller supplies an OAuth Bearer Token. The MCP's Elasticsearch service key never leaves the server.
-- Reads, including plaintext password retrieval, require `account:read`; mutations require `account:write`.
-- `digital_human_id` remains account data and does not provide a separate application-level authorization boundary.
-- Passwords and authorization headers must not appear in server logs, error messages, idempotency receipts, or other workflow records.
-- Raw Elasticsearch request tools are not part of the Bot-visible tool surface.
+Passwords are plaintext only across the trusted MCP call; Elasticsearch stores the encrypted envelope. Reads require `account:read`, mutations require `account:write`, and `digital_human_id` is data rather than an authorization principal.

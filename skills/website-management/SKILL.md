@@ -1,62 +1,31 @@
 ---
 name: website-management
-description: Query and maintain the shared website catalog through Search Stack MCP. Use for URL lookup, controlled-tag search, website creation, factual updates, tag changes, and soft deletion; do not use for browser state, credentials, or task history.
+description: Find and maintain websites and controlled tags with the Search Stack website_management tool. Use for catalog facts, not credentials, browser state, or task history.
 ---
 
 # Website Management
 
-Use `website_management` as the only website data path. Elasticsearch is the writable truth for the shared website catalog.
+Use only the exact MCP tool `website_management`. Do not use raw Elasticsearch, guessed tool names, or a local catalog copy. If the tool or required action is absent, stop and report it.
 
-## Required MCP surface
+## Choose the operation
 
-Inspect the connected MCP catalog before the first operation and use only `website_management`.
+- `get`: resolve a canonical or alias URL to one website.
+- `list`: browse by exploration status or controlled tags.
+- `create`: add a website that is not already represented.
+- `update`: replace or clear supported factual sections.
+- `update_tags`: add or remove controlled tags without replacing a stale tag list.
+- `delete`: retire the catalog record as a soft tombstone.
+- Dimension/tag actions: inspect or maintain the controlled registry.
 
-Read [references/mcp-contract.md](references/mcp-contract.md) before the first call in a task. Read [references/data-model.md](references/data-model.md) before creating a website or changing aliases, exploration, quality, traffic, or evidence.
+Inspect the live tool schema for exact fields. Use [references/tool-contract.json](references/tool-contract.json) only to verify generated schema, defaults, or scopes. Consult [references/mcp-contract.md](references/mcp-contract.md) for update, tag, projection, and concurrency semantics. Read [references/data-model.md](references/data-model.md) before writing aliases, exploration, quality, traffic, or evidence.
 
-If the tool or compatible schema is absent, stop and report the missing capability. Do not fall back to raw Elasticsearch requests, guessed tool IDs, or local website copies.
+## Rules
 
-## Basic use
-
-- Use `get` to look up a website by canonical or alias URL.
-- Use `list` with `tags_all` or `tags_any` to query websites by controlled tags.
-- Use `create` to add a website that is not already present.
-- Use `update` to change supported website facts with the current revision.
-- Use `update_tags` to add or remove controlled tags with the current revision.
-- Use `delete` only when the catalog record should become a soft tombstone.
-
-## URL lookup
-
-Pass the URL exactly as observed, with or without `http://` or `https://`. The Workflow interprets it as a site lookup: it normalizes the host and ignores scheme, port, path, query, and fragment for website identity, then performs exact canonical-host and alias-host matching. Do not implement normalization in prompts, use full-text URL search, strip `www`, or guess alias relationships.
-
-`get` returning `not_found` means no active website matches the normalized canonical or alias host. A path-level URL matches its website record; this catalog does not track individual pages. When the task needs equality or dedupe for a real page URL, preserve path and query—including their case—and use a resource-URL field in `task_management` instead.
-
-## Read projections
-
-- Use `summary` for ordinary tag search.
-- Use `standard` for normal URL lookup and site selection.
-- Use `full` only when traffic observations, evidence, or deleted-state details are required.
-
-Omitted fields may be outside the requested projection; do not treat them as missing stored facts.
-
-## Writes
-
-- Give every mutation a globally unique stable `request_id`. Reuse it only when retrying the same normalized operation; never reuse it for another mutation.
-- Preserve facts supported by actual exploration or use. Do not fill unknown values with guesses.
-- Keep aliases, exploration conclusions, quality, traffic observations, and evidence attributable and current.
-- Read the current revision before update, tag change, or delete unless it is already available in trusted task context.
-- Use `update_tags` with explicit additions and removals; never replace tags from a stale copy.
-- On `conflict`, read the current record and reconsider. Do not blindly retry or overwrite.
-- Keep `invalid` websites as useful negative knowledge. Delete only when the catalog record itself should be retired.
-
-## Tags
-
-Use controlled `dimension.value` codes. Query the live tag registry when the appropriate code is not already known; do not keep a copied tag list in the Skill. Only active definitions may be added to a website.
-
-## Boundaries
-
-- Read actions require `website:read`; catalog and tag mutations require `website:write`.
-- Website records may contain aliases, name, description, notes, exploration conclusions, controlled tags, quality, traffic observations, and supporting evidence.
-- Keep browser sessions, account credentials, task claims, retries, and complete task history outside website records.
-- Store concise current facts and evidence references, not copied web pages or raw browsing transcripts.
-- Skill instructions guide decisions; the MCP Workflow and Elasticsearch enforce normalization, permissions, revision CAS, and soft deletion.
-- The Search Stack MCP is an independent Rust service with compile-time Workflow registration. It is not a Kibana Workflow, a runtime script plugin, or an arbitrary Elasticsearch proxy.
+- Pass observed URLs directly. Website identity is the normalized host, so scheme, port, path, query, fragment, case, and trailing dot are ignored. Do not strip `www` or invent aliases.
+- This catalog identifies sites, not pages. Use `task_management` resource URLs when path or query distinguishes the item.
+- Use `summary` for lists, `standard` for normal lookup, and `full` only when detailed evidence, traffic, or deletion data is needed. An omitted projected field is not proof that stored data is absent.
+- Record observed facts only. Aliases must be verified; evidence should be concise and attributable. Keep `invalid` exploration as negative knowledge rather than deleting it.
+- Use live `dimension.value` tag codes and active definitions. Query the registry instead of relying on a copied list.
+- Every mutation needs a globally unique `request_id` that is never recycled; reuse it only for the identical retry. Updates, tag changes, deletion, and registry changes also need the current revision.
+- On `conflict`, read current state and reconsider. Do not overwrite blindly.
+- Keep credentials, browser sessions, task execution state, raw pages, and browsing transcripts out of website records.

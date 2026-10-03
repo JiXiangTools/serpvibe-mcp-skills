@@ -1,156 +1,29 @@
-# Task management MCP contract
+# Task behavior
 
-This is the required `task_management` Workflow contract. A Task is a dynamic table, its columns are the schema, and each Record is one row. Business field names are never fixed by the Skill.
+Exact actions and fields come from [tool-contract.json](tool-contract.json) or the live MCP schema. A Task defines a dynamic table; each Record is one row.
 
-## Common request and result
+## Idempotency and revisions
 
-Every mutation accepts a caller-generated, globally unique stable `request_id`, reused only to retry the same logical mutation. The server retains completed mutation receipts for `TASK_REQUEST_RETENTION_DAYS` (default 30 days, minimum 7). During that window, replaying the same canonical input returns the same completed outcome, while reusing the ID with different canonical input returns `rejected / request_id_reused`. Completed receipts older than the configured window may be pruned, so callers must keep mutation IDs globally unique forever and must never intentionally reuse an expired ID.
+- `request_id` is globally unique forever and may be reused only for the identical retry. Changed input returns `rejected / request_id_reused`.
+- Existing-resource mutations use revision CAS. A stale revision returns `conflict`; re-read before deciding.
 
-Mutations of existing Tasks or Records require `expected_revision`. Successful mutations increment `revision` exactly once. A stale revision returns `conflict` with the current safe projection; it never performs a last-write-wins update.
+## Records and leases
 
-Common outcomes and codes include:
+- `create_record` writes a completed fact. `reserve_record` atomically checks write dedupe and creates a lease before an external effect.
+- Only `record_reserved` permits the caller to proceed. Renew long-running work before expiry, then call `finish_record`.
+- `failed` means the effect definitely did not happen and releases the claim. `uncertain` keeps the claim until external verification and `resolve_record`.
+- An expired lease becomes uncertain and is never automatically reassigned. `busy`, `lease_lost`, and `uncertain` require inspection rather than blind retry.
 
-```text
-ok | not_found | conflict | invalid | rejected
-unauthorized | forbidden | unavailable
+## Duplicate checks
 
-task_created | task_found | task_listed | task_updated
-task_completed | task_cancelled | task_deleted
-record_created | record_reserved | record_completed
-record_failed | record_uncertain | record_resolved
-record_found | record_listed | record_updated | record_deleted
-available | duplicate | busy | lease_lost
-```
+- `check_duplicate` normalizes the required resource `url` and returns `duplicate_checked` with `exists: bool`.
+- With URL alone it searches globally. Optional `task_ref` and `task_name` are AND conditions; there is no `scope`, field-name, `values`, or query parameter.
+- It works without a Task write-dedupe rule.
+- Completed, reserved, and uncertain Records count as existing. Failed and duplicate audit rows do not.
 
-All list operations use bounded pagination and an opaque cursor. Collection fields such as `tasks`, `records`, and `matches` are always JSON arrays and are returned as `[]` when empty.
+## Write dedupe and lifecycle
 
-A missing or invalid Bearer Token is rejected by the MCP transport as HTTP `401 / invalid_token`, before the Tool runs. A valid token without the action scope returns `forbidden / oauth_scope_required`. Elasticsearch authorization and connectivity failures map to `unavailable / workflow_unavailable`.
-
-## Task schema
-
-`create_task` accepts:
-
-```text
-request_id
-task_name
-description?
-columns[]
-dedupe?
-```
-
-Each column has `key`, `label`, `type`, `required`, optional `description`, and optional `deprecated`. Supported types are `string`, `text`, `integer`, `number`, `boolean`, `date`, `datetime`, `url`, and `json`.
-
-A Task has at most one dedupe rule:
-
-```text
-namespace
-rule_key
-components[]             ordered slot-to-column mappings
-scope                    global | task; default global
-normalization_version    returned by the server
-```
-
-The write scope is fixed by the Task and cannot be overridden by a Record mutation. A read-only duplicate check may use global or task scope. `case_sensitive` defaults to true for string components. The server assigns `normalization_version`; callers cannot choose it. `text` and `json` columns cannot be dedupe components.
-
-## Supported actions
-
-### Tasks
-
-```text
-create_task
-  request_id, task_name, description?, columns, dedupe?
-
-get_task
-  task_ref
-
-list_tasks
-  status?, cursor?, limit?
-
-update_task
-  request_id, task_ref, expected_revision
-  task_name?, description?, columns?, dedupe?
-
-complete_task | cancel_task
-  request_id, task_ref, expected_revision
-
-delete_task
-  request_id, task_ref, expected_revision, reason
-```
-
-Task status is `active | completed | cancelled`. Completed and cancelled Tasks reject new Records. Completion and cancellation require no reserved or uncertain Records. Delete is a tombstone and only accepts a terminal Task.
-
-### Records
-
-```text
-check_duplicate
-  task_ref, values, scope?, limit?
-
-create_record
-  request_id, task_ref, values
-
-reserve_record
-  request_id, task_ref, values, lease_seconds?
-
-renew_reservation
-  request_id, record_ref, lease_ref, expected_revision, lease_seconds?
-
-finish_record
-  request_id, record_ref, lease_ref, expected_revision
-  outcome, values_patch?, error_code?, error_message?
-
-resolve_record
-  request_id, record_ref, expected_revision
-  resolution, values_patch?, reason
-
-get_record
-  record_ref
-
-list_records
-  task_ref, status?, created_after?, created_before?, cursor?, limit?
-
-update_record
-  request_id, record_ref, expected_revision, values_patch
-
-delete_record
-  request_id, record_ref, expected_revision, reason
-```
-
-`create_record` writes a completed row for an already-known fact. `reserve_record` is mandatory before an external side effect and atomically performs dedupe plus a lease. `check_duplicate` is advisory only.
-
-Calling `check_duplicate` for a Task without a dedupe rule returns `invalid`.
-
-Record status is:
-
-```text
-reserved | completed | failed | uncertain | duplicate
-```
-
-`failed` means the external effect is confirmed not to have occurred and releases the Claim. `uncertain` blocks duplicates until `resolve_record` confirms completed or failed. A duplicate Record points to the existing Record and does not own a Claim.
-
-Lease duration defaults to 300 seconds and must be between 30 and 1800 seconds. An expired lease returns `lease_lost` and becomes uncertain; it is never automatically reassigned. The caller must verify the external system and resolve the Record before any retry.
-
-`update_record` may patch only non-dedupe values. Reserved and uncertain Records cannot be deleted. Deleting a completed Record does not release its dedupe history.
-
-For `values_patch`, JSON `null` clears an optional non-dedupe column. Required and dedupe columns cannot be cleared. Mutation `request_id` values must be globally unique, not merely unique inside one Task.
-
-## Dedupe
-
-The Workflow derives fingerprints from the Task rule and original values. Callers never provide normalized values or fingerprints.
-
-- Global scope compares compatible Tasks sharing `namespace + rule_key + normalization_version`.
-- Task scope adds `task_ref` to the identity.
-- Tasks sharing a namespace and rule key must use compatible components, types, normalization, and write scope.
-- Records store a scope-independent match fingerprint for read-only cross-task lookup; Claims use a second fingerprint that includes the configured write scope and task_ref when needed.
-- String normalization uses Unicode NFKC, trim, whitespace collapse, and the configured case behavior.
-- URL columns use resource-URL normalization, not the host-only site identity used by `account_management` and `website_management`. The Workflow lowercases scheme and host, removes default ports and fragments, normalizes an empty path to `/`, preserves non-default ports, and preserves path/query case, query values, and parameter ordering.
-
-The Workflow owns stable IDs, schema validation, dedupe profile compatibility, normalization, claims, lease expiry handling, timestamps, allowed state transitions, revisions, idempotency, recovery, and tombstones.
-
-Administrative retention removes only completed idempotency receipt documents after the configured window. It never removes pending receipts, Tasks, Records, Claims, dedupe profiles, or business tombstones, so retention cannot release a duplicate identity or hide unresolved work.
-
-## Security and logging
-
-- Each Bot uses its own OAuth-backed MCP identity. The server's Elasticsearch service identity is fixed, restricted to Workflow indices, and never shared with callers.
-- The Workflow executes with least-privilege access to its fixed index, while action scopes authorize each Bot at the MCP boundary.
-- Workflow traces contain request metadata and outcomes, not Authorization, lease references, full values, credentials, or unrestricted payloads.
-- Raw Elasticsearch request tools are not part of the Bot-visible tool surface.
+- A Task may define one ordered write-dedupe rule. Global scope shares compatible rules across Tasks; task scope adds `task_ref`.
+- URL dedupe preserves path/query case and order while normalizing scheme, IDNA host, host case/trailing dot, default port, fragment, and empty path.
+- Dedupe values are immutable. Deleting a completed Record does not release its identity.
+- Completed or cancelled Tasks reject new Records. Complete or cancel only after reserved and uncertain work is resolved. Delete accepts only a terminal Task and creates a tombstone.

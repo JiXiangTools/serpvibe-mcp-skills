@@ -1,0 +1,259 @@
+{
+  "architecture": {
+    "dynamic_plugins": false,
+    "runtime": "static_rust_workflows",
+    "transport": "mcp_streamable_http",
+    "writable_truth": "elasticsearch"
+  },
+  "authentication": {
+    "elasticsearch_auth_or_connection_failure": {
+      "code": "workflow_unavailable",
+      "layer": "tool",
+      "outcome": "unavailable"
+    },
+    "missing_action_scope": {
+      "code": "oauth_scope_required",
+      "layer": "tool",
+      "outcome": "forbidden"
+    },
+    "missing_or_invalid_token": {
+      "code": "invalid_token",
+      "layer": "http",
+      "status": 401
+    }
+  },
+  "contract_version": 3,
+  "idempotency": {
+    "caller_reuse_after_receipt_retention": false,
+    "mismatch": {
+      "code": "request_id_reused",
+      "outcome": "rejected"
+    },
+    "request_id_scope": "globally_unique_across_mutations",
+    "retry_rule": "reuse_only_for_the_same_canonical_request"
+  },
+  "tool_outcomes": [
+    "ok",
+    "not_found",
+    "conflict",
+    "rejected",
+    "invalid",
+    "forbidden",
+    "unavailable"
+  ],
+  "url_normalization": {
+    "resource_url": {
+      "function": "normalize_resource_url",
+      "normalizes": [
+        "scheme_case",
+        "host_case",
+        "idna_host",
+        "host_trailing_dot",
+        "empty_path"
+      ],
+      "preserves": [
+        "non_default_port",
+        "path_case",
+        "query_case",
+        "query_order"
+      ],
+      "removes": [
+        "default_port",
+        "fragment"
+      ],
+      "requires_absolute_http_url": true
+    },
+    "site_identity": {
+      "function": "normalize_site_identity",
+      "identity": "normalized_host",
+      "ignored": [
+        "scheme",
+        "port",
+        "path",
+        "query",
+        "fragment"
+      ],
+      "www_is_distinct_without_alias": true
+    }
+  },
+  "workflow": {
+    "identity": "normalized_host + normalized_username",
+    "input_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action": {
+              "const": "create",
+              "type": "string"
+            },
+            "digital_human_id": {
+              "type": "string"
+            },
+            "password": {
+              "type": "string"
+            },
+            "request_id": {
+              "type": "string"
+            },
+            "url": {
+              "description": "Website URL. Identity uses the same normalized host as website_management.",
+              "type": "string"
+            },
+            "username": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "action",
+            "request_id",
+            "digital_human_id",
+            "url",
+            "username",
+            "password"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "account_ref": {
+              "type": "string"
+            },
+            "action": {
+              "const": "get",
+              "type": "string"
+            }
+          },
+          "required": [
+            "action",
+            "account_ref"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action": {
+              "const": "list",
+              "type": "string"
+            },
+            "cursor": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "digital_human_id": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "limit": {
+              "default": 50,
+              "format": "uint32",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "url": {
+              "description": "Website URL. Path, query, fragment, host case, trailing dot, and port do not affect identity.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "action",
+            "url"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "account_ref": {
+              "type": "string"
+            },
+            "action": {
+              "const": "update",
+              "type": "string"
+            },
+            "digital_human_id": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "expected_revision": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "password": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "request_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "action",
+            "request_id",
+            "account_ref",
+            "expected_revision"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "account_ref": {
+              "type": "string"
+            },
+            "action": {
+              "const": "delete",
+              "type": "string"
+            },
+            "expected_revision": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "request_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "action",
+            "request_id",
+            "account_ref",
+            "expected_revision"
+          ],
+          "type": "object"
+        }
+      ],
+      "title": "AccountRecordsRequest",
+      "type": "object"
+    },
+    "read_actions": [
+      "get",
+      "list"
+    ],
+    "read_scope": "account:read",
+    "skill_name": "account-management",
+    "tool_name": "account_management",
+    "write_actions": [
+      "create",
+      "update",
+      "delete"
+    ],
+    "write_scope": "account:write"
+  }
+}

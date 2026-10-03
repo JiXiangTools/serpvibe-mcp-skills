@@ -1,0 +1,873 @@
+{
+  "architecture": {
+    "dynamic_plugins": false,
+    "runtime": "static_rust_workflows",
+    "transport": "mcp_streamable_http",
+    "writable_truth": "elasticsearch"
+  },
+  "authentication": {
+    "elasticsearch_auth_or_connection_failure": {
+      "code": "workflow_unavailable",
+      "layer": "tool",
+      "outcome": "unavailable"
+    },
+    "missing_action_scope": {
+      "code": "oauth_scope_required",
+      "layer": "tool",
+      "outcome": "forbidden"
+    },
+    "missing_or_invalid_token": {
+      "code": "invalid_token",
+      "layer": "http",
+      "status": 401
+    }
+  },
+  "contract_version": 3,
+  "idempotency": {
+    "caller_reuse_after_receipt_retention": false,
+    "mismatch": {
+      "code": "request_id_reused",
+      "outcome": "rejected"
+    },
+    "request_id_scope": "globally_unique_across_mutations",
+    "retry_rule": "reuse_only_for_the_same_canonical_request"
+  },
+  "tool_outcomes": [
+    "ok",
+    "not_found",
+    "conflict",
+    "rejected",
+    "invalid",
+    "forbidden",
+    "unavailable"
+  ],
+  "url_normalization": {
+    "resource_url": {
+      "function": "normalize_resource_url",
+      "normalizes": [
+        "scheme_case",
+        "host_case",
+        "idna_host",
+        "host_trailing_dot",
+        "empty_path"
+      ],
+      "preserves": [
+        "non_default_port",
+        "path_case",
+        "query_case",
+        "query_order"
+      ],
+      "removes": [
+        "default_port",
+        "fragment"
+      ],
+      "requires_absolute_http_url": true
+    },
+    "site_identity": {
+      "function": "normalize_site_identity",
+      "identity": "normalized_host",
+      "ignored": [
+        "scheme",
+        "port",
+        "path",
+        "query",
+        "fragment"
+      ],
+      "www_is_distinct_without_alias": true
+    }
+  },
+  "workflow": {
+    "duplicate_check": {
+      "accepts_scope": false,
+      "action": "check_duplicate",
+      "optional_and_conditions": [
+        "task_ref",
+        "task_name"
+      ],
+      "required_conditions": [
+        "url"
+      ],
+      "result": {
+        "code": "duplicate_checked",
+        "field": "exists",
+        "outcome": "ok",
+        "type": "boolean"
+      }
+    },
+    "identity": "task_ref and record_ref; read duplicate identity is normalized resource URL with optional task conditions; write dedupe is task-defined",
+    "input_schema": {
+      "$defs": {
+        "ColumnDefinition": {
+          "additionalProperties": false,
+          "properties": {
+            "deprecated": {
+              "default": false,
+              "type": "boolean"
+            },
+            "description": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "key": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "required": {
+              "default": false,
+              "type": "boolean"
+            },
+            "type": {
+              "$ref": "#/$defs/ColumnType"
+            }
+          },
+          "required": [
+            "key",
+            "label",
+            "type"
+          ],
+          "type": "object"
+        },
+        "ColumnType": {
+          "enum": [
+            "string",
+            "text",
+            "integer",
+            "number",
+            "boolean",
+            "date",
+            "datetime",
+            "url",
+            "json"
+          ],
+          "type": "string"
+        },
+        "DedupeComponent": {
+          "additionalProperties": false,
+          "properties": {
+            "case_sensitive": {
+              "default": true,
+              "type": "boolean"
+            },
+            "field": {
+              "type": "string"
+            },
+            "slot": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "slot",
+            "field"
+          ],
+          "type": "object"
+        },
+        "DedupeDefinitionInput": {
+          "additionalProperties": false,
+          "properties": {
+            "components": {
+              "items": {
+                "$ref": "#/$defs/DedupeComponent"
+              },
+              "type": "array"
+            },
+            "namespace": {
+              "type": "string"
+            },
+            "rule_key": {
+              "type": "string"
+            },
+            "scope": {
+              "$ref": "#/$defs/DedupeScope",
+              "default": "global"
+            }
+          },
+          "required": [
+            "namespace",
+            "rule_key",
+            "components"
+          ],
+          "type": "object"
+        },
+        "DedupeScope": {
+          "enum": [
+            "global",
+            "task"
+          ],
+          "type": "string"
+        },
+        "FinishOutcome": {
+          "enum": [
+            "completed",
+            "failed",
+            "uncertain"
+          ],
+          "type": "string"
+        },
+        "RecordStatus": {
+          "enum": [
+            "reserved",
+            "completed",
+            "failed",
+            "uncertain",
+            "duplicate"
+          ],
+          "type": "string"
+        },
+        "Resolution": {
+          "enum": [
+            "completed",
+            "failed"
+          ],
+          "type": "string"
+        },
+        "TaskStatus": {
+          "enum": [
+            "active",
+            "completed",
+            "cancelled"
+          ],
+          "type": "string"
+        }
+      },
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action": {
+              "const": "create_task",
+              "type": "string"
+            },
+            "columns": {
+              "items": {
+                "$ref": "#/$defs/ColumnDefinition"
+              },
+              "type": "array"
+            },
+            "dedupe": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/DedupeDefinitionInput"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
+            "description": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "request_id": {
+              "type": "string"
+            },
+            "task_name": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "action",
+            "request_id",
+            "task_name",
+            "columns"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action": {
+              "const": "get_task",
+              "type": "string"
+            },
+            "task_ref": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "action",
+            "task_ref"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action": {
+              "const": "list_tasks",
+              "type": "string"
+            },
+            "cursor": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "limit": {
+              "default": 50,
+              "format": "uint32",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "status": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/TaskStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action": {
+              "const": "update_task",
+              "type": "string"
+            },
+            "columns": {
+              "default": null,
+              "items": {
+                "$ref": "#/$defs/ColumnDefinition"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            },
+            "dedupe": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/DedupeDefinitionInput"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
+            "description": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "expected_revision": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "request_id": {
+              "type": "string"
+            },
+            "task_name": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "task_ref": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "action",
+            "request_id",
+            "task_ref",
+            "expected_revision"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action": {
+              "const": "complete_task",
+              "type": "string"
+            },
+            "expected_revision": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "request_id": {
+              "type": "string"
+            },
+            "task_ref": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "action",
+            "request_id",
+            "task_ref",
+            "expected_revision"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action": {
+              "const": "cancel_task",
+              "type": "string"
+            },
+            "expected_revision": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "request_id": {
+              "type": "string"
+            },
+            "task_ref": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "action",
+            "request_id",
+            "task_ref",
+            "expected_revision"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action": {
+              "const": "delete_task",
+              "type": "string"
+            },
+            "expected_revision": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "reason": {
+              "type": "string"
+            },
+            "request_id": {
+              "type": "string"
+            },
+            "task_ref": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "action",
+            "request_id",
+            "task_ref",
+            "expected_revision",
+            "reason"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action": {
+              "const": "check_duplicate",
+              "type": "string"
+            },
+            "task_name": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "task_ref": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "url": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "action",
+            "url"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action": {
+              "const": "create_record",
+              "type": "string"
+            },
+            "request_id": {
+              "type": "string"
+            },
+            "task_ref": {
+              "type": "string"
+            },
+            "values": {
+              "additionalProperties": true,
+              "type": "object"
+            }
+          },
+          "required": [
+            "action",
+            "request_id",
+            "task_ref",
+            "values"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action": {
+              "const": "reserve_record",
+              "type": "string"
+            },
+            "lease_seconds": {
+              "default": 300,
+              "format": "uint32",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "request_id": {
+              "type": "string"
+            },
+            "task_ref": {
+              "type": "string"
+            },
+            "values": {
+              "additionalProperties": true,
+              "type": "object"
+            }
+          },
+          "required": [
+            "action",
+            "request_id",
+            "task_ref",
+            "values"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action": {
+              "const": "renew_reservation",
+              "type": "string"
+            },
+            "expected_revision": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "lease_ref": {
+              "type": "string"
+            },
+            "lease_seconds": {
+              "default": 300,
+              "format": "uint32",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "record_ref": {
+              "type": "string"
+            },
+            "request_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "action",
+            "request_id",
+            "record_ref",
+            "lease_ref",
+            "expected_revision"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action": {
+              "const": "finish_record",
+              "type": "string"
+            },
+            "error_code": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "error_message": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "expected_revision": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "lease_ref": {
+              "type": "string"
+            },
+            "outcome": {
+              "$ref": "#/$defs/FinishOutcome"
+            },
+            "record_ref": {
+              "type": "string"
+            },
+            "request_id": {
+              "type": "string"
+            },
+            "values_patch": {
+              "additionalProperties": true,
+              "default": {},
+              "type": "object"
+            }
+          },
+          "required": [
+            "action",
+            "request_id",
+            "record_ref",
+            "lease_ref",
+            "expected_revision",
+            "outcome"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action": {
+              "const": "resolve_record",
+              "type": "string"
+            },
+            "expected_revision": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "reason": {
+              "type": "string"
+            },
+            "record_ref": {
+              "type": "string"
+            },
+            "request_id": {
+              "type": "string"
+            },
+            "resolution": {
+              "$ref": "#/$defs/Resolution"
+            },
+            "values_patch": {
+              "additionalProperties": true,
+              "default": {},
+              "type": "object"
+            }
+          },
+          "required": [
+            "action",
+            "request_id",
+            "record_ref",
+            "expected_revision",
+            "resolution",
+            "reason"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action": {
+              "const": "get_record",
+              "type": "string"
+            },
+            "record_ref": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "action",
+            "record_ref"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action": {
+              "const": "list_records",
+              "type": "string"
+            },
+            "created_after": {
+              "default": null,
+              "format": "date-time",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "created_before": {
+              "default": null,
+              "format": "date-time",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "cursor": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "limit": {
+              "default": 50,
+              "format": "uint32",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "status": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/RecordStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
+            "task_ref": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "action",
+            "task_ref"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action": {
+              "const": "update_record",
+              "type": "string"
+            },
+            "expected_revision": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "record_ref": {
+              "type": "string"
+            },
+            "request_id": {
+              "type": "string"
+            },
+            "values_patch": {
+              "additionalProperties": true,
+              "type": "object"
+            }
+          },
+          "required": [
+            "action",
+            "request_id",
+            "record_ref",
+            "expected_revision",
+            "values_patch"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action": {
+              "const": "delete_record",
+              "type": "string"
+            },
+            "expected_revision": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "reason": {
+              "type": "string"
+            },
+            "record_ref": {
+              "type": "string"
+            },
+            "request_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "action",
+            "request_id",
+            "record_ref",
+            "expected_revision",
+            "reason"
+          ],
+          "type": "object"
+        }
+      ],
+      "title": "TaskRecordsRequest",
+      "type": "object"
+    },
+    "read_actions": [
+      "get_task",
+      "list_tasks",
+      "check_duplicate",
+      "get_record",
+      "list_records"
+    ],
+    "read_scope": "task:read",
+    "skill_name": "task-management",
+    "tool_name": "task_management",
+    "write_actions": [
+      "create_task",
+      "update_task",
+      "complete_task",
+      "cancel_task",
+      "delete_task",
+      "create_record",
+      "reserve_record",
+      "renew_reservation",
+      "finish_record",
+      "resolve_record",
+      "update_record",
+      "delete_record"
+    ],
+    "write_scope": "task:write"
+  }
+}

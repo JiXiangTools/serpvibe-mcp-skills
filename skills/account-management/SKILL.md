@@ -1,42 +1,28 @@
 ---
 name: account-management
-description: Manage Serpvibe account credentials through the account_management tool exposed by the Search Stack MCP. Use for creating, reading, updating, listing, or deleting account records; do not use for tasks, websites, browser interaction, or digital-human memory.
+description: Store and retrieve website login credentials with the Search Stack account_management tool. Use for account records, not browsing, website catalog data, tasks, or memory.
 ---
 
 # Account Management
 
-Use the independent Search Stack MCP as the only account-data access path. Elasticsearch is the only writable truth. Do not use raw Elasticsearch tools, guessed index names, or a local account copy.
+Use only the exact MCP tool `account_management`. Do not use raw Elasticsearch, guessed tool names, or a local credential copy. If the tool or required action is absent, stop and report it.
 
-## Required MCP surface
+## Choose the operation
 
-Before the first operation, inspect the connected MCP tool catalog and require this business tool:
+- `create`: save a new website account.
+- `get`: read one known `account_ref`.
+- `list`: find accounts for a URL, optionally narrowed by DigitalHuman.
+- `update`: change the password or DigitalHuman owner.
+- `delete`: retire a credential while preserving its identity tombstone.
 
-- `account_management`
+Inspect the live tool schema for exact fields. Use [references/tool-contract.json](references/tool-contract.json) only to verify generated schema, defaults, or scopes. Consult [references/mcp-contract.md](references/mcp-contract.md) when identity, mutation, or deletion semantics matter.
 
-Read [references/mcp-contract.md](references/mcp-contract.md) before the first invocation in a task. If the tool is unavailable or its schema is incompatible, stop and report the missing capability.
+## Rules
 
-## Workflow
-
-1. Determine the action, exact account, and requested change.
-2. For `create`, `update`, and `delete`, generate one globally unique stable `request_id` and reuse it only when retrying the same logical mutation. Never reuse it for another mutation or with changed input.
-3. For `update` and `delete`, read the current record when its revision is not already present in trusted task context.
-4. Send a password directly in the `password` field. Do not pre-encrypt it or send an encryption envelope. The MCP encrypts it before Elasticsearch storage.
-5. Invoke one matching `account_management` action. Let the workflow normalize identities, validate the schema, apply revision CAS, enforce request-id idempotency, and check the caller's OAuth scopes.
-6. Treat `conflict` as a fresh-decision boundary: read the new current record and reconsider the change. Never blindly overwrite it.
-7. Create accounts with `url`, never `platform`. The workflow uses the same site-identity normalization as `website_management`: only the normalized host identifies the website, so scheme, port, path, query, fragment, host case, and a trailing dot do not change account website identity. This is not resource-URL normalization; never use it to decide whether two pages are the same URL.
-8. Read credentials with exact `get` or by listing a `url`. Both return plaintext passwords by default; set `include_password=false` when credentials are not needed. Do not repeat returned passwords in summaries or durable records.
-
-## Resource rules
-
-- One DigitalHuman may own multiple accounts on the same website. The same normalized URL host and username identify one external account globally; the account cannot belong to two DigitalHumans at once.
-- URL and username are immutable after creation. Password and DigitalHuman ownership may be updated with revision CAS.
-- The MCP runtime holds `ACCOUNT_KEYS_JSON` and `ACCOUNT_ACTIVE_KEY_ID`. Elasticsearch stores only an authenticated AES-256-GCM envelope.
-- Exact reads and URL lists require `account:read` and return plaintext passwords by default. `include_password=false` is a response projection for callers that do not need credentials, not a separate authorization boundary.
-- Never put passwords into summaries, task records, website documents, evidence, logs, memory, or a `request_id`.
-- Deletion preserves a non-secret tombstone, clears the encrypted credential, and permanently reserves the account identity.
-
-## Boundaries
-
-- This Skill manages data. It does not browse websites, receive email, solve challenges, or claim those actions succeeded.
-- MCP caller identity and authorization come from the validated OAuth Access Token. `digital_human_id` is account data, not an authentication principal.
-- The Search Stack MCP is an independent Rust service with compile-time Workflow registration. It is not a Kibana Workflow, a runtime script plugin, or an arbitrary Elasticsearch proxy.
+- Create with `url`, never `platform`. Website identity is the normalized host; scheme, port, path, query, fragment, case, and trailing dot do not distinguish accounts. `www` remains distinct.
+- The unique account identity is normalized host plus normalized username. URL and username are immutable.
+- Send passwords as plaintext MCP fields. The server encrypts storage. Credential reads through `get` and `list` always return plaintext passwords.
+- Never place a returned password in summaries, logs, tasks, website records, memory, evidence, or `request_id`.
+- Every mutation needs a globally unique `request_id` that is never recycled; reuse it only for the identical retry. `update` and `delete` also need the current revision.
+- On `conflict`, read current state and reconsider. Do not overwrite blindly.
+- This Skill manages credentials only. It does not log in, browse, receive email, or prove an external action succeeded.
