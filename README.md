@@ -1,19 +1,17 @@
 # Serpvibe Search Stack Plugin
 
-Public Agent Plugin that installs Serpvibe's typed business workflow Skills and
-their authenticated MCP connection together.
+Public Agent Plugin that installs Serpvibe's three production business-workflow
+Skills and their authenticated MCP connection together.
 
 ## Included skills
 
 - `account-management`: manage encrypted account records.
 - `website-management`: query and maintain the shared website catalog.
 - `task-management`: manage dynamic tasks and row-level processing state.
-- `memory-management`: manage Role and DigitalHuman memory through Search Stack MCP.
 
-All four skills use the public `search-stack-mcp` connection declared in
-`mcp.json`. The account, website, and task workflows are available now. The
-memory skill and its connection can be installed now; memory operations become
-available when the two memory workflows are published by the same MCP service.
+The plugin exposes exactly these three directories from the root `skills/`
+directory. All three Skills use the public `search-stack-mcp` connection
+declared in `mcp.json`.
 
 The public Search Stack MCP connection uses OAuth 2.1 discovery. Clients receive
 short-lived Bearer Tokens and never receive the MCP server's Elasticsearch API
@@ -31,7 +29,7 @@ account encryption keys, deployment configuration, or MCP server source code.
 The repository is public and can be installed without a GitHub token, SSH
 credentials, MCP token, or Elasticsearch key.
 
-### Install the plugin
+### Install the plugin (recommended)
 
 Add the public Serpvibe marketplace:
 
@@ -40,10 +38,12 @@ codex plugin marketplace add JiXiangTools/serpvibe-mcp-skills --ref main
 codex plugin add serpvibe-search-stack@serpvibe-plugins
 ```
 
-Installation loads all four Skills and the `search-stack-mcp` URL from the same
-package. In the ChatGPT desktop app, install the plugin from the Plugins
-Directory and complete the connection prompt. With Codex CLI, start OAuth
-explicitly after installation:
+This installs the three Skills and the `search-stack-mcp` connection from one
+package. You can also open `/plugins` inside Codex and install
+`serpvibe-search-stack` from the `Serpvibe Plugins` marketplace. Start a new
+chat after installation so the new Skill catalog is loaded.
+
+Complete OAuth when prompted. With Codex CLI, it can also be started explicitly:
 
 ```bash
 codex mcp login search-stack-mcp \
@@ -54,6 +54,15 @@ codex mcp login search-stack-mcp \
 The resulting access token is short-lived and scoped; the MCP server's
 Elasticsearch API key is never distributed to the client.
 
+Verify that Codex sees the installation with:
+
+```bash
+codex plugin list --marketplace serpvibe-plugins
+```
+
+In the ChatGPT desktop app, install the plugin from the Plugins Directory and
+complete the connection prompt.
+
 The marketplace behavior is declared in `.agents/plugins/marketplace.json`:
 
 - `installation: AVAILABLE` exposes the plugin for an explicit, reviewable
@@ -62,15 +71,15 @@ The marketplace behavior is declared in `.agents/plugins/marketplace.json`:
   during installation when that host provides an install-time connection UI.
 
 The Auth0 tenant must enable Dynamic Client Registration under
-`Settings > Advanced`. The `serpvibe-mcp` API must also grant all seven scopes
-as the default user-delegated permissions for third-party applications. That
-lets compatible public OAuth clients register themselves without receiving an
-Auth0 secret or the server's Elasticsearch key.
+`Settings > Advanced`. The `serpvibe-mcp` API must grant the six scopes shown in
+the login command as the default user-delegated permissions for third-party
+applications. That lets compatible public OAuth clients register themselves
+without receiving an Auth0 secret or the server's Elasticsearch key.
 
 ### Skills-only fallback
 
 Use direct Skill installation only on clients that do not support Agent
-Plugins. This installs the four instruction bundles but cannot install or
+Plugins. This installs the three instruction bundles but cannot install or
 authenticate `mcp.json`:
 
 ```bash
@@ -79,8 +88,7 @@ python3 "${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-installer/scripts/inst
   --ref main \
   --path skills/account-management \
          skills/website-management \
-         skills/task-management \
-         skills/memory-management
+         skills/task-management
 ```
 
 Install one Skill the same way when only its instructions are needed:
@@ -96,18 +104,16 @@ The direct installer stops instead of overwriting an existing Skill directory.
 All directly installed Skills require a separately configured
 `search-stack-mcp` connection.
 
-## Package the complete plugin
+## Package the production plugin
 
-Build a complete local plugin directory with all four Skills and the MCP
-connection:
+Build a local plugin directory containing the three production Skills and the
+MCP connection:
 
 ```bash
-./scripts/package_plugin.sh 0.2.3 \
-  account_management \
-  website_management \
-  task_management \
-  memory_management
+./scripts/package_plugin.sh
 ```
 
-The generated directory is written under `target/plugins/` and contains a
-content hash in `build.json`.
+The release ID defaults to the version in `plugin.json`. The generated directory
+is written under `target/plugins/` and contains a content hash in `build.json`.
+Packaging fails if the root `skills/` directory contains anything outside the
+three production Skills.
