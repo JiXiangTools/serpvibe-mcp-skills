@@ -40,7 +40,7 @@ Omitted fields may be outside the requested projection; do not treat them as mis
 
 ## Writes
 
-- Give every mutation a stable `request_id`. Reuse it only when retrying the same normalized operation.
+- Give every mutation a globally unique stable `request_id`. Reuse it only when retrying the same normalized operation; never reuse it for another mutation.
 - Preserve facts supported by actual exploration or use. Do not fill unknown values with guesses.
 - Keep aliases, exploration conclusions, quality, traffic observations, and evidence attributable and current.
 - Read the current revision before update, tag change, or delete unless it is already available in trusted task context.
@@ -59,3 +59,4 @@ Use controlled `dimension.value` codes. Query the live tag registry when the app
 - Keep browser sessions, account credentials, task claims, retries, and complete task history outside website records.
 - Store concise current facts and evidence references, not copied web pages or raw browsing transcripts.
 - Skill instructions guide decisions; the MCP Workflow and Elasticsearch enforce normalization, permissions, revision CAS, and soft deletion.
+- The Search Stack MCP is an independent Rust service with compile-time Workflow registration. It is not a Kibana Workflow, a runtime script plugin, or an arbitrary Elasticsearch proxy.

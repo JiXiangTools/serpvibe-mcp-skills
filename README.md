@@ -102,7 +102,7 @@ Build a complete local plugin directory with all four Skills and the MCP
 connection:
 
 ```bash
-./scripts/package_plugin.sh 0.2.2 \
+./scripts/package_plugin.sh 0.2.3 \
   account_management \
   website_management \
   task_management \

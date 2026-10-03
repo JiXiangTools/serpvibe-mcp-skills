@@ -18,7 +18,7 @@ Read [references/mcp-contract.md](references/mcp-contract.md) before the first i
 ## Workflow
 
 1. Determine the action, exact account, and requested change.
-2. For `create`, `update`, and `delete`, generate one stable `request_id` and reuse it for every retry of the same logical mutation. Never reuse it with changed input.
+2. For `create`, `update`, and `delete`, generate one globally unique stable `request_id` and reuse it only when retrying the same logical mutation. Never reuse it for another mutation or with changed input.
 3. For `update` and `delete`, read the current record when its revision is not already present in trusted task context.
 4. Send a password directly in the `password` field. Do not pre-encrypt it or send an encryption envelope. The MCP encrypts it before Elasticsearch storage.
 5. Invoke one matching `account_management` action. Let the workflow normalize identities, validate the schema, apply revision CAS, enforce request-id idempotency, and check the caller's OAuth scopes.
@@ -39,4 +39,4 @@ Read [references/mcp-contract.md](references/mcp-contract.md) before the first i
 
 - This Skill manages data. It does not browse websites, receive email, solve challenges, or claim those actions succeeded.
 - MCP caller identity and authorization come from the validated OAuth Access Token. `digital_human_id` is account data, not an authentication principal.
-- The Search Stack MCP is an independent Rust service. It does not use Kibana Workflow or expose arbitrary Elasticsearch requests.
+- The Search Stack MCP is an independent Rust service with compile-time Workflow registration. It is not a Kibana Workflow, a runtime script plugin, or an arbitrary Elasticsearch proxy.

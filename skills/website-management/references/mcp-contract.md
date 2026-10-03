@@ -11,7 +11,7 @@ create
   name
   description
   exploration
-  tag_codes[]
+  tag_codes[]?
   aliases[]?
   notes?
   quality?
@@ -42,8 +42,8 @@ update_tags
   request_id
   url
   expected_revision
-  add_tag_codes[]
-  remove_tag_codes[]
+  add_tag_codes[]?
+  remove_tag_codes[]?
 
 delete
   request_id
@@ -125,7 +125,7 @@ URL input may omit the scheme. URL lookup never uses full-text analysis.
 
 `tags_all` requires every supplied code. `tags_any` requires at least one supplied code. When both are present, both conditions must hold. Tag fields use exact keyword matching.
 
-`update_tags` validates active definitions, deduplicates additions and removals, rejects the same code in both lists, enforces single-value dimensions, and performs one Website revision CAS update.
+`update_tags` requires at least one non-empty add or remove array. It validates active definitions, deduplicates additions and removals, rejects the same code in both lists, enforces single-value dimensions, and performs one Website revision CAS update.
 
 ## Projections
 
@@ -137,7 +137,7 @@ URL input may omit the scheme. URL lookup never uses full-text analysis.
 ## Results and consistency
 
 ```text
-outcome: ok | not_found | conflict | invalid | unauthorized | forbidden | unavailable
+outcome: ok | not_found | conflict | invalid | rejected | unauthorized | forbidden | unavailable
 code
 website? | websites?
 matched_by?: canonical | alias
@@ -145,6 +145,8 @@ current_revision?
 next_cursor?
 ```
 
-Every mutation requires a stable `request_id`. Replaying the same normalized operation does not write again; reusing the ID for different input returns `invalid / request_id_reused`. Create uses normalized-host identity and create-only semantics. Update, tag change, delete, and registry update/archive actions require `expected_revision`. A stale revision returns `conflict / revision_conflict` without changing data.
+Every mutation requires a globally unique stable `request_id`, reused only to retry the same normalized operation. A replay does not write again; reusing the ID for different input returns `rejected / request_id_reused`. Create uses normalized-host identity and create-only semantics. Update, tag change, delete, and registry update/archive actions require `expected_revision`. A stale revision returns `conflict / revision_conflict` without changing data.
+
+A missing or invalid Bearer Token is rejected by the MCP transport as HTTP `401 / invalid_token`, before the Tool runs. A valid token without the action scope returns `forbidden / oauth_scope_required`. Elasticsearch authorization and connectivity failures map to `unavailable / workflow_unavailable`.
 
 Delete is a soft tombstone. Default get and list omit deleted records; `invalid` exploration remains active catalog data.

@@ -6,7 +6,7 @@ This is the required contract for the independent Search Stack MCP tool. Index n
 
 The tool name is `account_management`. It accepts an `action`-tagged object and rejects unknown fields.
 
-Every successful mutation is idempotent within its target account identity. `create`, `update`, and `delete` require a caller-generated `request_id` containing 1-128 ASCII letters, digits, `_`, `-`, `.`, or `:`. Replaying the same ID and canonical input returns the original successful result without incrementing `revision`. Reusing that ID with different canonical input for the same account returns `rejected / request_id_reused`.
+Every successful mutation is idempotent for its target account. `create`, `update`, and `delete` require a globally unique caller-generated `request_id` containing 1-128 ASCII letters, digits, `_`, `-`, `.`, or `:`. Reuse it only to retry the same logical mutation. Replaying the same ID and canonical input returns the original successful result without incrementing `revision`; reusing that ID with different canonical input returns `rejected / request_id_reused`.
 
 Existing-record mutations require `expected_revision`. A successful new mutation increments `revision` exactly once. A stale revision returns `conflict / revision_conflict` with `current_revision`.
 
@@ -18,10 +18,11 @@ not_found / account_not_found
 conflict / url_username_exists | revision_conflict
 rejected / request_id_reused
 invalid / <validation_code>
-unauthorized / elasticsearch_unauthorized
-forbidden / elasticsearch_forbidden
+forbidden / oauth_scope_required
 unavailable / workflow_unavailable
 ```
+
+A missing or invalid Bearer Token is rejected by the MCP transport as HTTP `401 / invalid_token`, before the Tool runs. Elasticsearch authorization and connectivity failures are not exposed directly and map to `unavailable / workflow_unavailable`.
 
 All list operations use bounded pagination and an opaque cursor.
 

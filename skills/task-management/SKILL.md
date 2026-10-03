@@ -40,3 +40,4 @@ Read [references/mcp-contract.md](references/mcp-contract.md) before invoking th
 - Account credentials, cookies, tokens, private keys, complete website or account documents, runtime sessions, transcripts, and memory do not belong in task records.
 - Skill instructions guide decisions; MCP and Elasticsearch enforce schemas, identity, idempotency, revisions, claims, leases, tombstones, and allowed state transitions.
 - Never expose raw index names or unrestricted query/write primitives to an untrusted Bot.
+- The Search Stack MCP is an independent Rust service with compile-time Workflow registration. It is not a Kibana Workflow, a runtime script plugin, or an arbitrary Elasticsearch proxy.

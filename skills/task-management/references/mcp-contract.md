@@ -4,7 +4,7 @@ This is the required `task_management` Workflow contract. A Task is a dynamic ta
 
 ## Common request and result
 
-Every mutation accepts a caller-generated stable `request_id`. The server retains completed mutation receipts for `TASK_REQUEST_RETENTION_DAYS` (default 30 days, minimum 7). During that window, replaying the same logical request with the same canonical input returns the same completed outcome, while reusing it with different canonical input returns `rejected`. Completed receipts older than the configured window may be pruned, so callers must keep mutation IDs globally unique forever and must never intentionally reuse an expired ID.
+Every mutation accepts a caller-generated, globally unique stable `request_id`, reused only to retry the same logical mutation. The server retains completed mutation receipts for `TASK_REQUEST_RETENTION_DAYS` (default 30 days, minimum 7). During that window, replaying the same canonical input returns the same completed outcome, while reusing the ID with different canonical input returns `rejected / request_id_reused`. Completed receipts older than the configured window may be pruned, so callers must keep mutation IDs globally unique forever and must never intentionally reuse an expired ID.
 
 Mutations of existing Tasks or Records require `expected_revision`. Successful mutations increment `revision` exactly once. A stale revision returns `conflict` with the current safe projection; it never performs a last-write-wins update.
 
@@ -23,6 +23,8 @@ available | duplicate | busy | lease_lost
 ```
 
 All list operations use bounded pagination and an opaque cursor. Collection fields such as `tasks`, `records`, and `matches` are always JSON arrays and are returned as `[]` when empty.
+
+A missing or invalid Bearer Token is rejected by the MCP transport as HTTP `401 / invalid_token`, before the Tool runs. A valid token without the action scope returns `forbidden / oauth_scope_required`. Elasticsearch authorization and connectivity failures map to `unavailable / workflow_unavailable`.
 
 ## Task schema
 
