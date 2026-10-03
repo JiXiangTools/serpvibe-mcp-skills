@@ -5,7 +5,7 @@ Skills and their authenticated MCP connection together.
 
 ## Included skills
 
-- `account-management`: manage encrypted account records.
+- `account-management`: manage URL-keyed account credentials.
 - `website-management`: query and maintain the shared website catalog.
 - `task-management`: manage dynamic tasks and row-level processing state.
 
