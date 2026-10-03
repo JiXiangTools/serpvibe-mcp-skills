@@ -22,7 +22,7 @@
       "status": 401
     }
   },
-  "contract_version": 5,
+  "contract_version": 6,
   "idempotency": {
     "caller_reuse_after_receipt_retention": false,
     "mismatch": {

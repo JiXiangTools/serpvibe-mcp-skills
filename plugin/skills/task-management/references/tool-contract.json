@@ -22,7 +22,7 @@
       "status": 401
     }
   },
-  "contract_version": 5,
+  "contract_version": 6,
   "idempotency": {
     "caller_reuse_after_receipt_retention": false,
     "mismatch": {
@@ -80,7 +80,7 @@
     "batch_create": {
       "action": "create_records",
       "idempotency": "per_item_request_id",
-      "max_items": 100,
+      "max_items": 500,
       "min_items": 1,
       "partial_results": true,
       "result_order": "input_order"
@@ -610,7 +610,7 @@
               "items": {
                 "$ref": "#/$defs/CreateRecordInput"
               },
-              "maxItems": 100,
+              "maxItems": 500,
               "minItems": 1,
               "type": "array"
             },

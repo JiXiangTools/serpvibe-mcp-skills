@@ -9,7 +9,7 @@ Use only the exact MCP tool `task_management`. A Task is a table definition; a R
 
 ## Choose the operation
 
-- `create_records`: record 1–100 facts already known to be complete; use a one-item batch for a single fact.
+- `create_records`: record 1–500 facts already known to be complete; use a one-item batch for a single fact.
 - `reserve_record`: claim work before an external side effect.
 - `renew_reservation`: extend a live claim.
 - `finish_record`: close reserved work as completed, failed, or uncertain.
@@ -22,7 +22,7 @@ Inspect the live tool schema for exact fields. Use [references/tool-contract.jso
 ## Rules
 
 - Define only needed columns. Business keys and values remain under `record.values`, so common names such as `result`, `status`, `revision`, and `task_ref` are valid and never collide with system fields. Follow the live key schema's syntax and sensitive-data restrictions.
-- In `create_records`, give every item its own permanently unique `request_id`. Inspect every ordered item result; batches may partially succeed. Retry the unchanged batch or only failed items, never rewrite successful items under new IDs.
+- In `create_records`, give every item its own permanently unique `request_id`. Inspect every ordered item result; batches may partially succeed. Retry the unchanged batch or only failed items, never rewrite successful items under new IDs. Prefer 100–200 items unless small records justify using the 500-item maximum.
 - Add a write dedupe rule only when uniqueness matters; default to global unless uniqueness is intentionally per Task.
 - Before any external side effect, call `reserve_record` and proceed only after `record_reserved`. Finish promptly and renew before a lease expires.
 - Mark `failed` only when the effect definitely did not happen. If it may have happened, use `uncertain`, verify externally, then resolve it.

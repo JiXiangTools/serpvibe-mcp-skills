@@ -16,7 +16,7 @@ Exact actions and fields come from [tool-contract.json](tool-contract.json) or t
 
 ## Records and leases
 
-- `create_records` writes 1–100 completed facts and is also the single-fact interface. Results preserve input order and report per-item outcome, code, and references plus batch counts.
+- `create_records` writes 1–500 completed facts and is also the single-fact interface. Results preserve input order and report per-item outcome, code, and references plus batch counts. Batches of 100–200 are the normal default; use the maximum only for small records when fewer round trips matter.
 - Batch items are independent: one invalid, conflicting, or unavailable item does not roll back successful items. The whole batch is rejected before writes only when its shape is invalid, including empty or oversized input and repeated item `request_id` values.
 - Retry the identical batch or only failed items with their original `request_id`. Do not assign new IDs to successful items. The HTTP body limit may impose a lower practical item count for large values.
 - `reserve_record` remains single-item because it atomically checks write dedupe and creates a lease before an external effect.
