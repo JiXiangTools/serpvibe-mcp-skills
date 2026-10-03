@@ -62,7 +62,7 @@ delete
   expected_revision
 ```
 
-One DigitalHuman may own multiple accounts on the same website. The workflow shares URL normalization with `website_management`: path, query, fragment, host case, trailing dot, and port do not affect website identity. The normalized host and normalized username pair is globally unique. Creating an existing pair with a different request returns `conflict / url_username_exists`.
+One DigitalHuman may own multiple accounts on the same website. The workflow shares site-identity normalization with `website_management`: scheme, port, path, query, fragment, host case, and a trailing dot do not affect website identity. `www` is not removed. This host-only rule must not be used for page/resource URL equality, where path and query remain significant. The normalized host and normalized username pair is globally unique. Creating an existing pair with a different request returns `conflict / url_username_exists`.
 
 `account_ref`, URL, and username are immutable. An update may change the password or `digital_human_id` and always requires revision CAS.
 

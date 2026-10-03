@@ -27,6 +27,7 @@ Read [references/mcp-contract.md](references/mcp-contract.md) before invoking th
 
 - Write one Record per logical row and finish it promptly; do not defer all results until the Task ends.
 - Put scenario data in `values` according to the Task columns. The MCP validates types, derives normalization and fingerprints, and owns all system fields.
+- Treat a `url` column as a real resource URL, not a website identity. Supply an absolute HTTP(S) URL. The MCP normalizes scheme/host, default ports, and fragments while preserving non-default ports, path case, query case, values, and parameter order. Do not reduce it to a host unless the business value is explicitly only a host.
 - Do not modify values used by the dedupe rule. Create a new Record when the unique identity changes.
 - Record `failed` only when the external effect is known not to have happened. If it may have happened, record `uncertain`, verify externally, then use `resolve_record`.
 - Use `update_record` for later changes to non-dedupe columns. Deletes are business tombstones and do not erase completed dedupe history.

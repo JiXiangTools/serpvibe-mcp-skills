@@ -51,7 +51,7 @@ delete
   expected_revision
 ```
 
-`get`, `update`, `update_tags`, and `delete` accept canonical or alias URLs. The Workflow normalizes the input before exact keyword lookup and applies mutations to the canonical Website.
+`get`, `update`, `update_tags`, and `delete` accept canonical or alias URLs. The Workflow applies site-identity normalization before exact keyword lookup and mutates the canonical Website. Scheme, port, path, query, fragment, host case, and a trailing dot do not affect this identity; `www` is not removed.
 
 For update patches, an omitted field is unchanged and an explicit `null` clears a nullable field. A provided section or collection replaces that complete section. Tags change only through `update_tags`.
 
@@ -119,7 +119,7 @@ ok / website_found
 not_found / website_not_found
 ```
 
-URL input may omit the scheme. URL lookup never uses full-text analysis.
+URL input may omit the scheme. URL lookup never uses full-text analysis. This Tool answers which website a URL belongs to; it does not compare page/resource URLs. Page equality must preserve path and query, including their case and query ordering.
 
 ## Tag queries
 

@@ -24,7 +24,7 @@ Website
   deleted_at?
 ```
 
-`normalized_host` is the website identity. Scheme, path, query, fragment, case, and a trailing dot do not change that identity. `www` remains distinct unless recorded as a verified alias.
+`normalized_host` is the website identity. Scheme, port, path, query, fragment, host case, and a trailing dot do not change that identity. `www` remains distinct unless recorded as a verified alias. This host-only identity is intentionally different from a real page/resource URL, whose path and query remain significant and case-preserving.
 
 ## Exploration
 

@@ -142,7 +142,7 @@ The Workflow derives fingerprints from the Task rule and original values. Caller
 - Tasks sharing a namespace and rule key must use compatible components, types, normalization, and write scope.
 - Records store a scope-independent match fingerprint for read-only cross-task lookup; Claims use a second fingerprint that includes the configured write scope and task_ref when needed.
 - String normalization uses Unicode NFKC, trim, whitespace collapse, and the configured case behavior.
-- URL normalization lowercases scheme and host, removes default ports and fragments, normalizes an empty path to `/`, and preserves path case and query ordering.
+- URL columns use resource-URL normalization, not the host-only site identity used by `account_management` and `website_management`. The Workflow lowercases scheme and host, removes default ports and fragments, normalizes an empty path to `/`, preserves non-default ports, and preserves path/query case, query values, and parameter ordering.
 
 The Workflow owns stable IDs, schema validation, dedupe profile compatibility, normalization, claims, lease expiry handling, timestamps, allowed state transitions, revisions, idempotency, recovery, and tombstones.
 

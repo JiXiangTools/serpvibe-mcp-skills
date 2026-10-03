@@ -23,7 +23,7 @@ Read [references/mcp-contract.md](references/mcp-contract.md) before the first i
 4. Send a password directly in the `password` field. Do not pre-encrypt it or send an encryption envelope. The MCP encrypts it before Elasticsearch storage.
 5. Invoke one matching `account_management` action. Let the workflow normalize identities, validate the schema, apply revision CAS, enforce request-id idempotency, and check the caller's OAuth scopes.
 6. Treat `conflict` as a fresh-decision boundary: read the new current record and reconsider the change. Never blindly overwrite it.
-7. Create accounts with `url`, never `platform`. The workflow uses the same URL normalization as `website_management`, so paths, queries, host case, trailing dots, and ports do not change website identity.
+7. Create accounts with `url`, never `platform`. The workflow uses the same site-identity normalization as `website_management`: only the normalized host identifies the website, so scheme, port, path, query, fragment, host case, and a trailing dot do not change account website identity. This is not resource-URL normalization; never use it to decide whether two pages are the same URL.
 8. Read credentials with exact `get` or by listing a `url`. Both return plaintext passwords by default; set `include_password=false` when credentials are not needed. Do not repeat returned passwords in summaries or durable records.
 
 ## Resource rules

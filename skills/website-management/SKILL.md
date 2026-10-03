@@ -26,9 +26,9 @@ If the tool or compatible schema is absent, stop and report the missing capabili
 
 ## URL lookup
 
-Pass the URL exactly as observed, with or without `http://` or `https://`. The Workflow normalizes it and performs exact canonical-host and alias-host matching. Do not implement URL normalization in prompts, use full-text URL search, strip `www`, or guess alias relationships.
+Pass the URL exactly as observed, with or without `http://` or `https://`. The Workflow interprets it as a site lookup: it normalizes the host and ignores scheme, port, path, query, and fragment for website identity, then performs exact canonical-host and alias-host matching. Do not implement normalization in prompts, use full-text URL search, strip `www`, or guess alias relationships.
 
-`get` returning `not_found` means no active website matches the normalized canonical or alias host. A path-level URL matches its website record; this catalog does not track individual pages.
+`get` returning `not_found` means no active website matches the normalized canonical or alias host. A path-level URL matches its website record; this catalog does not track individual pages. When the task needs equality or dedupe for a real page URL, preserve path and query—including their case—and use a resource-URL field in `task_management` instead.
 
 ## Read projections
 
