@@ -7,6 +7,12 @@ Exact actions and fields come from [tool-contract.json](tool-contract.json) or t
 - `request_id` is globally unique forever and may be reused only for the identical retry. Changed input returns `rejected / request_id_reused`.
 - Existing-resource mutations use revision CAS. A stale revision returns `conflict`; re-read before deciding.
 
+## Dynamic column namespace
+
+- Column keys and their values are always nested under `record.values`; system fields remain at the Record root and never share that namespace.
+- Common business keys such as `result`, `status`, `revision`, and `task_ref` are valid. Do not rename them merely because an identically named system field exists outside `values`.
+- The live key schema defines lowercase identifier syntax and rejects credential/session-like names. The runtime uses the same policy constants and returns `invalid / invalid_column_key` for violations.
+
 ## Records and leases
 
 - `create_record` writes a completed fact. `reserve_record` atomically checks write dedupe and creates a lease before an external effect.

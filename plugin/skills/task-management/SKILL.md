@@ -21,7 +21,8 @@ Inspect the live tool schema for exact fields. Use [references/tool-contract.jso
 
 ## Rules
 
-- Define only needed columns. Add a write dedupe rule only when uniqueness matters; default to global unless uniqueness is intentionally per Task.
+- Define only needed columns. Business keys and values remain under `record.values`, so common names such as `result`, `status`, `revision`, and `task_ref` are valid and never collide with system fields. Follow the live key schema's syntax and sensitive-data restrictions.
+- Add a write dedupe rule only when uniqueness matters; default to global unless uniqueness is intentionally per Task.
 - Before any external side effect, call `reserve_record` and proceed only after `record_reserved`. Finish promptly and renew before a lease expires.
 - Mark `failed` only when the effect definitely did not happen. If it may have happened, use `uncertain`, verify externally, then resolve it.
 - `check_duplicate` takes `url`; add `task_ref` and/or `task_name` as AND conditions. It returns `exists` and is never permission to act.

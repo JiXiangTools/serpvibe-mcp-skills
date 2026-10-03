@@ -22,7 +22,7 @@
       "status": 401
     }
   },
-  "contract_version": 3,
+  "contract_version": 4,
   "idempotency": {
     "caller_reuse_after_receipt_retention": false,
     "mismatch": {
@@ -77,6 +77,32 @@
     }
   },
   "workflow": {
+    "column_keys": {
+      "invalid_code": "invalid_column_key",
+      "max_length": 64,
+      "pattern": "^[a-z][a-z0-9_]{0,63}$",
+      "response_path": "record.values.<column_key>",
+      "sensitive_exact": [
+        "password",
+        "passwd",
+        "token",
+        "cookie",
+        "secret",
+        "private_key",
+        "api_key",
+        "authorization",
+        "session",
+        "session_id"
+      ],
+      "sensitive_suffixes": [
+        "_password",
+        "_token",
+        "_secret",
+        "_cookie"
+      ],
+      "storage_path": "record.values.<column_key>",
+      "system_fields_share_namespace": false
+    },
     "duplicate_check": {
       "accepts_scope": false,
       "action": "check_duplicate",
@@ -112,6 +138,40 @@
               ]
             },
             "key": {
+              "description": "Lowercase business-field identifier stored under record.values. Credential/session-like keys are forbidden.",
+              "maxLength": 64,
+              "minLength": 1,
+              "not": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "password",
+                      "passwd",
+                      "token",
+                      "cookie",
+                      "secret",
+                      "private_key",
+                      "api_key",
+                      "authorization",
+                      "session",
+                      "session_id"
+                    ]
+                  },
+                  {
+                    "pattern": "_password$"
+                  },
+                  {
+                    "pattern": "_token$"
+                  },
+                  {
+                    "pattern": "_secret$"
+                  },
+                  {
+                    "pattern": "_cookie$"
+                  }
+                ]
+              },
+              "pattern": "^[a-z][a-z0-9_]{0,63}$",
               "type": "string"
             },
             "label": {
