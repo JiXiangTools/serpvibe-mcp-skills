@@ -23,14 +23,15 @@ Read [references/mcp-contract.md](references/mcp-contract.md) before the first i
 4. Send a password directly in the `password` field. Do not pre-encrypt it or send an encryption envelope. The MCP encrypts it before Elasticsearch storage.
 5. Invoke one matching `account_management` action. Let the workflow normalize identities, validate the schema, apply revision CAS, enforce request-id idempotency, and check the caller's OAuth scopes.
 6. Treat `conflict` as a fresh-decision boundary: read the new current record and reconsider the change. Never blindly overwrite it.
-7. Request `include_password=true` only when the caller explicitly needs that exact credential. The response then contains the plaintext password; do not repeat it in summaries or durable records.
+7. Create accounts with `url`, never `platform`. The workflow uses the same URL normalization as `website_management`, so paths, queries, host case, trailing dots, and ports do not change website identity.
+8. Read credentials with exact `get` or by listing a `url`. Both return plaintext passwords by default; set `include_password=false` when credentials are not needed. Do not repeat returned passwords in summaries or durable records.
 
 ## Resource rules
 
-- One DigitalHuman may own multiple accounts on the same platform. The same normalized platform and username identify one external account globally; the account cannot belong to two DigitalHumans at once.
-- Platform and username are immutable after creation. Password and DigitalHuman ownership may be updated with revision CAS.
+- One DigitalHuman may own multiple accounts on the same website. The same normalized URL host and username identify one external account globally; the account cannot belong to two DigitalHumans at once.
+- URL and username are immutable after creation. Password and DigitalHuman ownership may be updated with revision CAS.
 - The MCP runtime holds `ACCOUNT_KEYS_JSON` and `ACCOUNT_ACTIVE_KEY_ID`. Elasticsearch stores only an authenticated AES-256-GCM envelope.
-- Lists and ordinary reads omit passwords. Exact `get` may return plaintext only when `include_password=true` and the caller has both `account:read` and `account:credentials:read`.
+- Exact reads and URL lists require `account:read` and return plaintext passwords by default. `include_password=false` is a response projection for callers that do not need credentials, not a separate authorization boundary.
 - Never put passwords into summaries, task records, website documents, evidence, logs, memory, or a `request_id`.
 - Deletion preserves a non-secret tombstone, clears the encrypted credential, and permanently reserves the account identity.
 

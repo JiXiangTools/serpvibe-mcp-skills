@@ -15,7 +15,7 @@ Every result has `outcome` and `code`. Stable combinations include:
 ```text
 ok / created | found | listed | updated | deleted
 not_found / account_not_found
-conflict / platform_username_exists | revision_conflict
+conflict / url_username_exists | revision_conflict
 rejected / request_id_reused
 invalid / <validation_code>
 unauthorized / elasticsearch_unauthorized
@@ -33,17 +33,18 @@ Supported actions:
 create
   request_id
   digital_human_id
-  platform
+  url
   username
   password
 
 get
   account_ref
-  include_password: boolean = false
+  include_password: boolean = true
 
 list
-  digital_human_id
-  platform?
+  url
+  digital_human_id?
+  include_password: boolean = true
   cursor?
   limit?
 
@@ -60,18 +61,18 @@ delete
   expected_revision
 ```
 
-One DigitalHuman may own multiple accounts on the same platform. The workflow normalizes `platform` and `username`, and the pair is globally unique. Creating an existing pair with a different request returns `conflict / platform_username_exists`.
+One DigitalHuman may own multiple accounts on the same website. The workflow shares URL normalization with `website_management`: path, query, fragment, host case, trailing dot, and port do not affect website identity. The normalized host and normalized username pair is globally unique. Creating an existing pair with a different request returns `conflict / url_username_exists`.
 
-`account_ref`, platform, and username are immutable. An update may change the password or `digital_human_id` and always requires revision CAS.
+`account_ref`, URL, and username are immutable. An update may change the password or `digital_human_id` and always requires revision CAS.
 
-Passwords cross the trusted MCP transport as plaintext request values. The server validates them, encrypts them with AES-256-GCM, and writes only the authenticated envelope to Elasticsearch. `get(include_password=false)` and every `list` result omit the password. `get(include_password=true)` decrypts server-side and returns plaintext for the exact account.
+Passwords cross the trusted MCP transport as plaintext request values. The server validates them, encrypts them with AES-256-GCM, and writes only the authenticated envelope to Elasticsearch. Exact `get` and URL `list` decrypt and return matching passwords by default. Passing `include_password=false` omits passwords as a response projection without changing authorization.
 
-Delete keeps `account_ref`, `digital_human_id`, platform, username, revision, timestamps, and `deleted_at`, but clears the encrypted credential. The tombstone is not restorable as a usable credential and its identity cannot be reused silently.
+Delete keeps `account_ref`, `digital_human_id`, URL identity, username, revision, timestamps, and `deleted_at`, but clears the encrypted credential. The tombstone is not restorable as a usable credential and its identity cannot be reused silently.
 
 ## Security and logging
 
 - Each HTTP caller supplies an OAuth Bearer Token. The MCP's Elasticsearch service key never leaves the server.
-- Reads require `account:read`; mutations require `account:write`; plaintext password reads additionally require `account:credentials:read`.
+- Reads, including plaintext password retrieval, require `account:read`; mutations require `account:write`.
 - `digital_human_id` remains account data and does not provide a separate application-level authorization boundary.
 - Passwords and authorization headers must not appear in server logs, error messages, idempotency receipts, or other workflow records.
 - Raw Elasticsearch request tools are not part of the Bot-visible tool surface.

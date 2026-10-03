@@ -48,7 +48,7 @@ explicitly after installation:
 ```bash
 codex mcp login search-stack-mcp \
   --oauth-client-registration dcr \
-  --scopes account:read,account:write,account:credentials:read,website:read,website:write,task:read,task:write
+  --scopes account:read,account:write,website:read,website:write,task:read,task:write
 ```
 
 The resulting access token is short-lived and scoped; the MCP server's
@@ -102,7 +102,7 @@ Build a complete local plugin directory with all four Skills and the MCP
 connection:
 
 ```bash
-./scripts/package_plugin.sh 0.2.1 \
+./scripts/package_plugin.sh 0.2.2 \
   account_management \
   website_management \
   task_management \
