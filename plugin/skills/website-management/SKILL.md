@@ -5,7 +5,7 @@ description: Find and maintain websites and controlled tags with the Search Stac
 
 # Website Management
 
-Use only the exact MCP tool `website_management`. Do not use raw Elasticsearch, guessed tool names, or a local catalog copy. If the tool or required action is absent, stop and report it.
+Use only the exact MCP tool `website_management`. Do not use raw Elasticsearch, guessed tool names, or a local catalog copy. If a required tool/action is absent, or the connector validates it as another action, stop and refresh or reconnect the MCP before starting a new session; updating this Skill alone does not refresh tool schemas.
 
 ## Choose the operation
 
@@ -27,5 +27,6 @@ Inspect the live tool schema for exact fields. Use [references/tool-contract.jso
 - Record observed facts only. Aliases must be verified; evidence should be concise and attributable. Keep `invalid` exploration as negative knowledge rather than deleting it.
 - Use live `dimension.value` tag codes and active definitions. Query the registry instead of relying on a copied list.
 - Every mutation needs a globally unique `request_id` that is never recycled; reuse it only for the identical retry. Updates, tag changes, deletion, and registry changes also need the current revision.
+- A connector-side schema rejection does not authorize a new `request_id` or a substitute action. After refresh, retry the identical request with its original ID; if delivery was ambiguous, inspect current state first.
 - On `conflict`, read current state and reconsider. Do not overwrite blindly.
 - Keep credentials, browser sessions, task execution state, raw pages, and browsing transcripts out of website records.

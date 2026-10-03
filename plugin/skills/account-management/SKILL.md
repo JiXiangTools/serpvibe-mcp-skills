@@ -5,7 +5,7 @@ description: Manage website credentials and operate registration, login, or pass
 
 # Account Management
 
-Use only the exact MCP tools `account_management` and `account_browser`. Do not use raw Elasticsearch, guessed tool names, a local credential copy, or a general browser tool for passwords. If the required tool or action is absent, stop and report it.
+Use only the exact MCP tools `account_management` and `account_browser`. Do not use raw Elasticsearch, guessed tool names, a local credential copy, or a general browser tool for passwords. If a required tool/action is absent, or the connector validates it as another action, stop and refresh or reconnect the MCP before starting a new session; updating this Skill alone does not refresh tool schemas.
 
 ## Choose the operation
 
@@ -40,5 +40,6 @@ Inspect the live tool schema for exact fields. Use [references/tool-contract.jso
 - Registration and password change are two-phase operations. Call `complete` only after visible site success. On `reconciliation_required`, re-read the account revision and retry `complete` with that revision; do not generate a second password.
 - Never place a returned password in summaries, logs, tasks, website records, memory, evidence, or `request_id`.
 - Every mutation needs a globally unique `request_id` that is never recycled; reuse it only for the identical retry. `update` and `delete` also need the current revision.
+- A connector-side schema rejection does not authorize a new `request_id` or a substitute action. After refresh, retry the identical request with its original ID; if delivery was ambiguous, inspect current state first.
 - On `conflict`, read current state and reconsider. Do not overwrite blindly.
 - Page observation is evidence, not a transactional guarantee. If the site result is ambiguous, do not call `complete`; keep or cancel the operation and report the uncertainty.

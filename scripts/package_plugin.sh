@@ -49,6 +49,7 @@ cleanup() {
 trap cleanup EXIT
 
 PACKAGE="$TEMP_DIR/package"
+MCP_CONTRACT_VERSION=""
 mkdir -p "$PACKAGE/skills"
 cp "$PLUGIN_ROOT/plugin.json" "$PACKAGE/plugin.json"
 cp "$PLUGIN_ROOT/mcp.json" "$PACKAGE/mcp.json"
@@ -69,6 +70,13 @@ for workflow in "${PRODUCTION_WORKFLOWS[@]}"; do
         || die "$skill does not depend on $dependency"
     jq -e --arg dependency "$dependency" '.mcpServers[$dependency] != null' "$PLUGIN_ROOT/mcp.json" >/dev/null \
         || die "$skill dependency is missing from mcp.json: $dependency"
+    contract_version="$(jq -er '.contract_version' "$source_dir/references/tool-contract.json")"
+    [[ "$contract_version" =~ ^[1-9][0-9]*$ ]] || die "$skill has an invalid MCP contract version"
+    if [[ -z "$MCP_CONTRACT_VERSION" ]]; then
+        MCP_CONTRACT_VERSION="$contract_version"
+    elif [[ "$MCP_CONTRACT_VERSION" != "$contract_version" ]]; then
+        die "production Skills do not share one MCP contract version"
+    fi
     cp -a "$source_dir" "$PACKAGE/skills/$skill"
 done
 
@@ -80,8 +88,14 @@ WORKFLOWS_JSON="$(jq -cn --args '$ARGS.positional' "${PRODUCTION_WORKFLOWS[@]}")
 jq -n \
     --arg release_id "$RELEASE_ID" \
     --arg content_sha256 "$CONTENT_SHA256" \
+    --argjson mcp_contract_version "$MCP_CONTRACT_VERSION" \
     --argjson workflows "$WORKFLOWS_JSON" \
-    '{release_id: $release_id, content_sha256: $content_sha256, workflows: $workflows}' \
+    '{
+        release_id: $release_id,
+        content_sha256: $content_sha256,
+        mcp_contract_version: $mcp_contract_version,
+        workflows: $workflows
+    }' \
     >"$PACKAGE/build.json"
 
 mv "$PACKAGE" "$DESTINATION"

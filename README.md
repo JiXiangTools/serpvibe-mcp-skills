@@ -55,6 +55,13 @@ codex mcp login search-stack-mcp \
 The resulting access token is short-lived and scoped; the MCP server's
 Elasticsearch API key is never distributed to the client.
 
+Updating this plugin or its Skills does not by itself refresh a connector's
+saved MCP tool schema. After a release changes tool actions or parameters,
+refresh or reconnect `search-stack-mcp` and start a new session. In ChatGPT
+Developer Mode, use `Refresh` on the plugin connection detail page. If another
+client has no schema-refresh action, remove and re-add the MCP connection. Do
+not substitute another action merely to satisfy an old local validator.
+
 Verify that Codex sees the installation with:
 
 ```bash
@@ -119,8 +126,9 @@ MCP connection:
 ```
 
 The release ID defaults to the version in `plugin/plugin.json`. The generated
-directory is written under `target/plugins/` and contains a content hash in
-`build.json`. Packaging fails if `plugin/skills/` contains anything outside the
+directory is written under `target/plugins/`; `build.json` contains its content
+hash and MCP contract version. Packaging fails if the three generated contracts
+do not share one version or if `plugin/skills/` contains anything outside the
 three production Skills.
 
 The same package is used by ChatGPT Web, macOS Codex, and Linux Codex CLI.

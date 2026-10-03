@@ -1,9 +1,16 @@
 {
   "architecture": {
     "browser_executor": "loopback_nodriver_sidecar",
+    "contract_version_signals": [
+      "export_contracts",
+      "initialize_server_info",
+      "x_mcp_contract_version_header"
+    ],
     "credential_injection": "server_side_only",
     "dynamic_plugins": false,
+    "mcp_cache_control": "no_store",
     "runtime": "static_rust_workflows",
+    "schema_change_client_action": "refresh_or_reconnect_then_start_new_session",
     "supported_clients": [
       "chatgpt_web",
       "codex_macos",
@@ -29,7 +36,7 @@
       "status": 401
     }
   },
-  "contract_version": 7,
+  "contract_version": 8,
   "idempotency": {
     "caller_reuse_after_receipt_retention": false,
     "mismatch": {

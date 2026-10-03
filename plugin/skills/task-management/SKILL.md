@@ -5,7 +5,7 @@ description: Track table-shaped work, row results, reservations, and duplicate c
 
 # Task Management
 
-Use only the exact MCP tool `task_management`. A Task is a table definition; a Record is one row. Do not use raw Elasticsearch, guessed tool names, or a local task copy. If the tool or required action is absent, stop and report it.
+Use only the exact MCP tool `task_management`. A Task is a table definition; a Record is one row. Do not use raw Elasticsearch, guessed tool names, or a local task copy. If a required tool/action is absent, or the connector validates it as another action, stop and refresh or reconnect the MCP before starting a new session; updating this Skill alone does not refresh tool schemas.
 
 ## Choose the operation
 
@@ -29,6 +29,7 @@ Inspect the live tool schema for exact fields. Use [references/tool-contract.jso
 - `check_duplicate` takes `url`; add `task_ref` and/or `task_name` as AND conditions. It returns `exists` and is never permission to act.
 - URL columns are resource URLs: path and query remain identity-bearing. Do not collapse them to website hosts.
 - Every mutation needs a globally unique `request_id` that is never recycled; reuse it only for the identical retry. Existing-resource changes also need the current revision.
+- A connector-side schema rejection does not authorize new per-item IDs or a substitute action. After refresh, retry the identical batch or only its unconfirmed items with their original IDs; if delivery was ambiguous, inspect current state first.
 - Treat `conflict`, `busy`, `lease_lost`, and `uncertain` as reasons to inspect current state, not to retry blindly.
 - Complete or cancel a Task only after reserved and uncertain Records are resolved. Deletion is a tombstone and does not erase completed dedupe facts.
 - Keep credentials, sessions, raw transcripts, memory, and full website/account documents out of task records. This Skill tracks work; another authorized tool performs it.
