@@ -9,9 +9,9 @@ Skills and their authenticated MCP connection together.
 - `website-management`: query and maintain the shared website catalog.
 - `task-management`: manage dynamic tasks and row-level processing state.
 
-The plugin exposes exactly these three directories from the root `skills/`
-directory. All three Skills use the public `search-stack-mcp` connection
-declared in `mcp.json`.
+The installable `plugin/` tree exposes exactly these three directories from
+`plugin/skills/`. All three Skills use the public `search-stack-mcp` connection
+declared in `plugin/mcp.json`.
 
 The public Search Stack MCP connection uses OAuth 2.1 discovery. Clients receive
 short-lived Bearer Tokens and never receive the MCP server's Elasticsearch API
@@ -63,7 +63,9 @@ codex plugin list --marketplace serpvibe-plugins
 In the ChatGPT desktop app, install the plugin from the Plugins Directory and
 complete the connection prompt.
 
-The marketplace behavior is declared in `.agents/plugins/marketplace.json`:
+The marketplace behavior is declared in `.agents/plugins/marketplace.json`.
+Its source is `plugin/`, so repository files outside that directory are never
+installed with the plugin:
 
 - `installation: AVAILABLE` exposes the plugin for an explicit, reviewable
   install.
@@ -86,9 +88,9 @@ authenticate `mcp.json`:
 python3 "${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-installer/scripts/install-skill-from-github.py" \
   --repo JiXiangTools/serpvibe-mcp-skills \
   --ref main \
-  --path skills/account-management \
-         skills/website-management \
-         skills/task-management
+  --path plugin/skills/account-management \
+         plugin/skills/website-management \
+         plugin/skills/task-management
 ```
 
 Install one Skill the same way when only its instructions are needed:
@@ -97,7 +99,7 @@ For example, install only `account-management`:
 
 ```bash
 python3 "${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-installer/scripts/install-skill-from-github.py" \
-  --url https://github.com/JiXiangTools/serpvibe-mcp-skills/tree/main/skills/account-management
+  --url https://github.com/JiXiangTools/serpvibe-mcp-skills/tree/main/plugin/skills/account-management
 ```
 
 The direct installer stops instead of overwriting an existing Skill directory.
@@ -113,7 +115,7 @@ MCP connection:
 ./scripts/package_plugin.sh
 ```
 
-The release ID defaults to the version in `plugin.json`. The generated directory
-is written under `target/plugins/` and contains a content hash in `build.json`.
-Packaging fails if the root `skills/` directory contains anything outside the
+The release ID defaults to the version in `plugin/plugin.json`. The generated
+directory is written under `target/plugins/` and contains a content hash in
+`build.json`. Packaging fails if `plugin/skills/` contains anything outside the
 three production Skills.

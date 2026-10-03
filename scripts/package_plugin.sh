@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PLUGIN_ROOT="$ROOT/plugin"
 OUTPUT_ROOT="${PLUGIN_OUTPUT_ROOT:-$ROOT/target/plugins}"
 PRODUCTION_WORKFLOWS=(account_management website_management task_management)
 EXPECTED_SKILLS=$'account-management\ntask-management\nwebsite-management'
@@ -12,22 +13,23 @@ die() {
 }
 
 [[ $# -le 1 ]] || die "usage: $0 [release-id]"
-[[ -f "$ROOT/plugin.json" ]] || die "missing plugin.json"
+[[ -f "$PLUGIN_ROOT/plugin.json" ]] || die "missing plugin/plugin.json"
+[[ -f "$PLUGIN_ROOT/mcp.json" ]] || die "missing plugin/mcp.json"
 jq -e '
     .name == "serpvibe-search-stack"
     and (.version | type == "string" and length > 0)
     and (.description | type == "string" and length > 0)
     and (.author.name | type == "string" and length > 0)
-' "$ROOT/plugin.json" >/dev/null || die "invalid plugin manifest"
-PLUGIN_VERSION="$(jq -er '.version' "$ROOT/plugin.json")"
+' "$PLUGIN_ROOT/plugin.json" >/dev/null || die "invalid plugin manifest"
+PLUGIN_VERSION="$(jq -er '.version' "$PLUGIN_ROOT/plugin.json")"
 RELEASE_ID="${1:-$PLUGIN_VERSION}"
 [[ "$RELEASE_ID" =~ ^[A-Za-z0-9._-]+$ ]] || die "invalid release ID"
 
 ACTUAL_SKILLS="$(
-    find "$ROOT/skills" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort
+    find "$PLUGIN_ROOT/skills" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort
 )"
 [[ "$ACTUAL_SKILLS" == "$EXPECTED_SKILLS" ]] || {
-    printf 'expected production skills:\n%s\nactual root skills:\n%s\n' \
+    printf 'expected production skills:\n%s\nactual plugin skills:\n%s\n' \
         "$EXPECTED_SKILLS" "$ACTUAL_SKILLS" >&2
     die "root skills directory does not match the production install surface"
 }
@@ -48,10 +50,8 @@ trap cleanup EXIT
 
 PACKAGE="$TEMP_DIR/package"
 mkdir -p "$PACKAGE/skills"
-cp "$ROOT/plugin.json" "$PACKAGE/plugin.json"
-if [[ -f "$ROOT/mcp.json" ]]; then
-    cp "$ROOT/mcp.json" "$PACKAGE/mcp.json"
-fi
+cp "$PLUGIN_ROOT/plugin.json" "$PACKAGE/plugin.json"
+cp "$PLUGIN_ROOT/mcp.json" "$PACKAGE/mcp.json"
 
 for workflow in "${PRODUCTION_WORKFLOWS[@]}"; do
     case "$workflow" in
@@ -60,14 +60,14 @@ for workflow in "${PRODUCTION_WORKFLOWS[@]}"; do
         task_management) skill="task-management"; dependency="search-stack-mcp" ;;
         *) die "no skill mapping for enabled workflow: $workflow" ;;
     esac
-    source_dir="$ROOT/skills/$skill"
+    source_dir="$PLUGIN_ROOT/skills/$skill"
     [[ -f "$source_dir/SKILL.md" ]] || die "missing skill manifest: $source_dir/SKILL.md"
     manifest_name="$(sed -n 's/^name:[[:space:]]*//p' "$source_dir/SKILL.md" | head -n 1)"
     [[ "$manifest_name" == "$skill" ]] || die "skill name mismatch for $skill"
     [[ -f "$source_dir/agents/openai.yaml" ]] || die "missing OpenAI metadata for $skill"
     rg -q "value:[[:space:]]*\"$dependency\"" "$source_dir/agents/openai.yaml" \
         || die "$skill does not depend on $dependency"
-    jq -e --arg dependency "$dependency" '.mcpServers[$dependency] != null' "$ROOT/mcp.json" >/dev/null \
+    jq -e --arg dependency "$dependency" '.mcpServers[$dependency] != null' "$PLUGIN_ROOT/mcp.json" >/dev/null \
         || die "$skill dependency is missing from mcp.json: $dependency"
     cp -a "$source_dir" "$PACKAGE/skills/$skill"
 done

@@ -8,7 +8,7 @@
       "name": "serpvibe-search-stack",
       "source": {
         "source": "local",
-        "path": "./"
+        "path": "./plugin"
       },
       "policy": {
         "installation": "AVAILABLE",
