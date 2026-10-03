@@ -22,7 +22,7 @@
       "status": 401
     }
   },
-  "contract_version": 4,
+  "contract_version": 5,
   "idempotency": {
     "caller_reuse_after_receipt_retention": false,
     "mismatch": {
@@ -77,6 +77,14 @@
     }
   },
   "workflow": {
+    "batch_create": {
+      "action": "create_records",
+      "idempotency": "per_item_request_id",
+      "max_items": 100,
+      "min_items": 1,
+      "partial_results": true,
+      "result_order": "input_order"
+    },
     "column_keys": {
       "invalid_code": "invalid_column_key",
       "max_length": 64,
@@ -205,6 +213,23 @@
             "json"
           ],
           "type": "string"
+        },
+        "CreateRecordInput": {
+          "additionalProperties": false,
+          "properties": {
+            "request_id": {
+              "type": "string"
+            },
+            "values": {
+              "additionalProperties": true,
+              "type": "object"
+            }
+          },
+          "required": [
+            "request_id",
+            "values"
+          ],
+          "type": "object"
         },
         "DedupeComponent": {
           "additionalProperties": false,
@@ -578,25 +603,25 @@
           "additionalProperties": false,
           "properties": {
             "action": {
-              "const": "create_record",
+              "const": "create_records",
               "type": "string"
             },
-            "request_id": {
-              "type": "string"
+            "records": {
+              "items": {
+                "$ref": "#/$defs/CreateRecordInput"
+              },
+              "maxItems": 100,
+              "minItems": 1,
+              "type": "array"
             },
             "task_ref": {
               "type": "string"
-            },
-            "values": {
-              "additionalProperties": true,
-              "type": "object"
             }
           },
           "required": [
             "action",
-            "request_id",
             "task_ref",
-            "values"
+            "records"
           ],
           "type": "object"
         },
@@ -920,7 +945,7 @@
       "complete_task",
       "cancel_task",
       "delete_task",
-      "create_record",
+      "create_records",
       "reserve_record",
       "renew_reservation",
       "finish_record",

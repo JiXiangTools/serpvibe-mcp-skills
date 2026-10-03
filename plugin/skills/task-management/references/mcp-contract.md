@@ -5,6 +5,7 @@ Exact actions and fields come from [tool-contract.json](tool-contract.json) or t
 ## Idempotency and revisions
 
 - `request_id` is globally unique forever and may be reused only for the identical retry. Changed input returns `rejected / request_id_reused`.
+- `create_records` carries `request_id` per item rather than at batch level. A batch is an ordered processing container, not one atomic mutation.
 - Existing-resource mutations use revision CAS. A stale revision returns `conflict`; re-read before deciding.
 
 ## Dynamic column namespace
@@ -15,7 +16,10 @@ Exact actions and fields come from [tool-contract.json](tool-contract.json) or t
 
 ## Records and leases
 
-- `create_record` writes a completed fact. `reserve_record` atomically checks write dedupe and creates a lease before an external effect.
+- `create_records` writes 1–100 completed facts and is also the single-fact interface. Results preserve input order and report per-item outcome, code, and references plus batch counts.
+- Batch items are independent: one invalid, conflicting, or unavailable item does not roll back successful items. The whole batch is rejected before writes only when its shape is invalid, including empty or oversized input and repeated item `request_id` values.
+- Retry the identical batch or only failed items with their original `request_id`. Do not assign new IDs to successful items. The HTTP body limit may impose a lower practical item count for large values.
+- `reserve_record` remains single-item because it atomically checks write dedupe and creates a lease before an external effect.
 - Only `record_reserved` permits the caller to proceed. Renew long-running work before expiry, then call `finish_record`.
 - `failed` means the effect definitely did not happen and releases the claim. `uncertain` keeps the claim until external verification and `resolve_record`.
 - An expired lease becomes uncertain and is never automatically reassigned. `busy`, `lease_lost`, and `uncertain` require inspection rather than blind retry.
