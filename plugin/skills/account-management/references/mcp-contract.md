@@ -16,3 +16,22 @@ Exact actions and fields come from [tool-contract.json](tool-contract.json) or t
 - `delete` clears the encrypted credential but preserves a permanent identity tombstone.
 
 Passwords are plaintext only across the trusted MCP call; Elasticsearch stores the encrypted envelope. Reads require `account:read`, mutations require `account:write`, and `digital_human_id` is data rather than an authorization principal.
+
+## Server-side website operations
+
+The companion `account_browser` tool performs registration, login, and password
+changes through a server-side nodriver worker. All actions require both
+`account:read` and `account:write`. The bot receives only a redacted interactive-element snapshot
+and opaque `element_ref` values; credential injection has no password argument
+or result.
+
+Start/resume/complete mutations are durable and idempotent by the original
+`request_id`. Individual browser actions use a session-scoped `action_id` and
+cannot provide exactly-once guarantees across a lost external connection.
+Registration and password changes become account records only after the bot
+observes site success and calls `complete`. A revision collision enters
+`reconciliation_required` while retaining the encrypted pending password.
+
+Browser URLs use resource normalization, so path/query case is preserved, while
+all navigation remains on the account's normalized host. CAPTCHA and human
+verification are never bypassed.

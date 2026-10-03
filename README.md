@@ -1,37 +1,38 @@
 # Serpvibe Search Stack Plugin
 
-Public Agent Plugin that installs Serpvibe's three production business-workflow
+Private Agent Plugin that installs Serpvibe's three production business-workflow
 Skills and their authenticated MCP connection together.
 
 ## Included skills
 
-- `account-management`: manage URL-keyed account credentials.
+- `account-management`: manage URL-keyed credentials and operate server-side registration, login, credential injection, and password changes.
 - `website-management`: query and maintain the shared website catalog.
 - `task-management`: manage dynamic tasks and row-level processing state.
 
 The installable `plugin/` tree exposes exactly these three directories from
-`plugin/skills/`. All three Skills use the public `search-stack-mcp` connection
+`plugin/skills/`. All three Skills use the authenticated `search-stack-mcp` connection
 declared in `plugin/mcp.json`.
 
-The public Search Stack MCP connection uses OAuth 2.1 discovery. Clients receive
+The Search Stack MCP connection uses OAuth 2.1 discovery. Clients receive
 short-lived Bearer Tokens and never receive the MCP server's Elasticsearch API
 key. Account, website, and task read/write permissions are granted as OAuth
 scopes by the service administrator.
 
 ## Repository boundary
 
-This repository contains instructions, public tool contracts, and connection
+This repository contains instructions, tool contracts, and connection
 metadata only. It must not contain Elasticsearch credentials, OAuth secrets,
 account encryption keys, deployment configuration, or MCP server source code.
 
 ## Install in Codex
 
-The repository is public and can be installed without a GitHub token, SSH
-credentials, MCP token, or Elasticsearch key.
+The repository may remain private. Codex needs ordinary GitHub or local
+filesystem access to install it, but never needs an Elasticsearch key or an
+MCP bearer token in the repository.
 
 ### Install the plugin (recommended)
 
-Add the public Serpvibe marketplace:
+Add the private GitHub or local Serpvibe marketplace:
 
 ```bash
 codex plugin marketplace add JiXiangTools/serpvibe-mcp-skills --ref main
@@ -61,7 +62,9 @@ codex plugin list --marketplace serpvibe-plugins
 ```
 
 In the ChatGPT desktop app, install the plugin from the Plugins Directory and
-complete the connection prompt.
+complete the connection prompt. In ChatGPT Web Developer Mode, add
+`https://mcp-serpvibe.ficory.com/mcp` as a personal or workspace-only plugin;
+public Plugin Directory submission is not required.
 
 The marketplace behavior is declared in `.agents/plugins/marketplace.json`.
 Its source is `plugin/`, so repository files outside that directory are never
@@ -75,7 +78,7 @@ installed with the plugin:
 The Auth0 tenant must enable Dynamic Client Registration under
 `Settings > Advanced`. The `serpvibe-mcp` API must grant the six scopes shown in
 the login command as the default user-delegated permissions for third-party
-applications. That lets compatible public OAuth clients register themselves
+applications. That lets compatible OAuth clients register themselves
 without receiving an Auth0 secret or the server's Elasticsearch key.
 
 ### Skills-only fallback
@@ -119,3 +122,7 @@ The release ID defaults to the version in `plugin/plugin.json`. The generated
 directory is written under `target/plugins/` and contains a content hash in
 `build.json`. Packaging fails if `plugin/skills/` contains anything outside the
 three production Skills.
+
+The same package is used by ChatGPT Web, macOS Codex, and Linux Codex CLI.
+`account_browser` runs Chrome on the MCP host, so none of those clients needs a
+local password or browser extension.

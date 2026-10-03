@@ -1,7 +1,14 @@
 {
   "architecture": {
+    "browser_executor": "loopback_nodriver_sidecar",
+    "credential_injection": "server_side_only",
     "dynamic_plugins": false,
     "runtime": "static_rust_workflows",
+    "supported_clients": [
+      "chatgpt_web",
+      "codex_macos",
+      "codex_linux_cli"
+    ],
     "transport": "mcp_streamable_http",
     "writable_truth": "elasticsearch"
   },
@@ -22,7 +29,7 @@
       "status": 401
     }
   },
-  "contract_version": 6,
+  "contract_version": 7,
   "idempotency": {
     "caller_reuse_after_receipt_retention": false,
     "mismatch": {

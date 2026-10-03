@@ -1,7 +1,14 @@
 {
   "architecture": {
+    "browser_executor": "loopback_nodriver_sidecar",
+    "credential_injection": "server_side_only",
     "dynamic_plugins": false,
     "runtime": "static_rust_workflows",
+    "supported_clients": [
+      "chatgpt_web",
+      "codex_macos",
+      "codex_linux_cli"
+    ],
     "transport": "mcp_streamable_http",
     "writable_truth": "elasticsearch"
   },
@@ -22,7 +29,7 @@
       "status": 401
     }
   },
-  "contract_version": 6,
+  "contract_version": 7,
   "idempotency": {
     "caller_reuse_after_receipt_retention": false,
     "mismatch": {
@@ -77,6 +84,403 @@
     }
   },
   "workflow": {
+    "companion_tools": [
+      {
+        "actions": [
+          "start_registration",
+          "start_login",
+          "start_password_change",
+          "resume",
+          "observe",
+          "act",
+          "inject_credentials",
+          "complete",
+          "cancel"
+        ],
+        "credential_visibility": "server_side_injection_only",
+        "external_side_effects": true,
+        "idempotency": {
+          "browser_actions": "session_scoped_by_action_id",
+          "external_exactly_once": false,
+          "start_and_complete": "durable_by_request_id"
+        },
+        "input_schema": {
+          "$defs": {
+            "PasswordPolicy": {
+              "additionalProperties": false,
+              "properties": {
+                "digits": {
+                  "default": true,
+                  "type": "boolean"
+                },
+                "length": {
+                  "default": 24,
+                  "format": "uint16",
+                  "maximum": 65535,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "lowercase": {
+                  "default": true,
+                  "type": "boolean"
+                },
+                "symbols": {
+                  "default": true,
+                  "type": "boolean"
+                },
+                "uppercase": {
+                  "default": true,
+                  "type": "boolean"
+                }
+              },
+              "type": "object"
+            }
+          },
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "action": {
+                  "const": "start_registration",
+                  "type": "string"
+                },
+                "digital_human_id": {
+                  "type": "string"
+                },
+                "password_policy": {
+                  "$ref": "#/$defs/PasswordPolicy"
+                },
+                "request_id": {
+                  "type": "string"
+                },
+                "url": {
+                  "description": "Exact registration page URL. Unlike account identity, path and query are preserved.",
+                  "type": "string"
+                },
+                "username": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "action",
+                "request_id",
+                "digital_human_id",
+                "url",
+                "username"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "account_ref": {
+                  "type": "string"
+                },
+                "action": {
+                  "const": "start_login",
+                  "type": "string"
+                },
+                "request_id": {
+                  "type": "string"
+                },
+                "url": {
+                  "default": null,
+                  "description": "Exact login page URL. Defaults to the stored website origin.",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "action",
+                "request_id",
+                "account_ref"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "account_ref": {
+                  "type": "string"
+                },
+                "action": {
+                  "const": "start_password_change",
+                  "type": "string"
+                },
+                "expected_revision": {
+                  "format": "uint64",
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "password_policy": {
+                  "$ref": "#/$defs/PasswordPolicy"
+                },
+                "request_id": {
+                  "type": "string"
+                },
+                "url": {
+                  "default": null,
+                  "description": "Exact password settings page URL. Defaults to the stored website origin.",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "action",
+                "request_id",
+                "account_ref",
+                "expected_revision"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "action": {
+                  "const": "resume",
+                  "type": "string"
+                },
+                "operation_ref": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "action",
+                "operation_ref"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "action": {
+                  "const": "observe",
+                  "type": "string"
+                },
+                "operation_ref": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "action",
+                "operation_ref"
+              ],
+              "type": "object"
+            },
+            {
+              "oneOf": [
+                {
+                  "properties": {
+                    "command": {
+                      "const": "navigate",
+                      "type": "string"
+                    },
+                    "url": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "command",
+                    "url"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "properties": {
+                    "command": {
+                      "const": "click",
+                      "type": "string"
+                    },
+                    "element_ref": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "command",
+                    "element_ref"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "properties": {
+                    "command": {
+                      "const": "fill",
+                      "type": "string"
+                    },
+                    "element_ref": {
+                      "type": "string"
+                    },
+                    "text": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "command",
+                    "element_ref",
+                    "text"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "properties": {
+                    "command": {
+                      "const": "select",
+                      "type": "string"
+                    },
+                    "element_ref": {
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "command",
+                    "element_ref",
+                    "value"
+                  ],
+                  "type": "object"
+                }
+              ],
+              "properties": {
+                "action": {
+                  "const": "act",
+                  "type": "string"
+                },
+                "action_id": {
+                  "description": "Unique within this browser session. Duplicate action IDs are replayed by the worker.",
+                  "type": "string"
+                },
+                "operation_ref": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "action",
+                "operation_ref",
+                "action_id"
+              ],
+              "type": "object",
+              "unevaluatedProperties": false
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "action": {
+                  "const": "inject_credentials",
+                  "type": "string"
+                },
+                "confirm_password_element_ref": {
+                  "default": null,
+                  "description": "Optional password-confirmation field.",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "current_password_element_ref": {
+                  "default": null,
+                  "description": "Existing-password field for a password change.",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "new_password_element_ref": {
+                  "default": null,
+                  "description": "New-password field for a password change.",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "operation_ref": {
+                  "type": "string"
+                },
+                "password_element_ref": {
+                  "default": null,
+                  "description": "Password field for registration or login.",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "username_element_ref": {
+                  "default": null,
+                  "description": "Username/email field for registration or login.",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "action",
+                "operation_ref"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "action": {
+                  "const": "complete",
+                  "type": "string"
+                },
+                "expected_revision": {
+                  "default": null,
+                  "description": "Only use after a password-change reconciliation conflict.",
+                  "format": "uint64",
+                  "minimum": 0,
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "operation_ref": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "action",
+                "operation_ref"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "action": {
+                  "const": "cancel",
+                  "type": "string"
+                },
+                "operation_ref": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "action",
+                "operation_ref"
+              ],
+              "type": "object"
+            }
+          ],
+          "title": "AccountBrowserRequest",
+          "type": "object"
+        },
+        "required_scopes": [
+          "account:read",
+          "account:write"
+        ],
+        "tool_name": "account_browser",
+        "url_semantics": "resource_url_preserved_with_same_normalized_host_navigation"
+      }
+    ],
     "identity": "normalized_host + normalized_username",
     "input_schema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",

@@ -1,11 +1,11 @@
 interface:
   display_name: "账号管理"
-  short_description: "通过 Search Stack MCP 管理网站账号凭据"
-  default_prompt: "使用 $account-management 管理网站账号凭据。"
+  short_description: "管理网站账号，并在服务端完成注册、登录和改密"
+  default_prompt: "使用 $account-management 管理账号；涉及网站表单时优先使用 account_browser 服务端注入凭据。"
 dependencies:
   tools:
     - type: "mcp"
       value: "search-stack-mcp"
-      description: "Search Stack MCP account_management workflow"
+      description: "Search Stack MCP account_management and account_browser tools"
 policy:
   allow_implicit_invocation: true
