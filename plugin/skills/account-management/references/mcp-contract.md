@@ -2,6 +2,10 @@
 
 Exact actions and fields come from [tool-contract.json](tool-contract.json) or the live MCP schema.
 
+Use `account_read` for `get` and `list`, `account_write` for `create`, `update`,
+and `delete`, and `account_browser` for website operations. `account_management`
+is the internal Workflow ID, not an MCP tool name.
+
 ## Identity and reads
 
 - Website identity is host-only and shared with `website_management`; it ignores scheme, port, path, query, fragment, host case, and trailing dot. `www` remains distinct.
@@ -36,7 +40,8 @@ Browser URLs use resource normalization, so path/query case is preserved, while
 all navigation remains on the account's normalized host. CAPTCHA and human
 verification are never bypassed.
 
-`act` uses a flat request shape. `command` is a top-level sibling of `action`,
-`operation_ref`, and `action_id`: `navigate` requires `url`, `click` requires
-`element_ref`, `fill` requires `element_ref` plus `text`, and `select` requires
-`element_ref` plus `value`. Do not wrap those fields in a nested command object.
+Browser operations are direct top-level actions: `navigate` requires `url`,
+`click` requires `element_ref`, `fill` requires `element_ref` plus `text`, and
+`select` requires `element_ref` plus `value`. Each also requires
+`operation_ref` and `action_id`. There is no public `act` action or `command`
+field.

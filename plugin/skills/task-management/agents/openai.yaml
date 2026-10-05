@@ -6,6 +6,6 @@ dependencies:
   tools:
     - type: "mcp"
       value: "search-stack-mcp"
-      description: "Search Stack MCP with the task_management workflow"
+      description: "Search Stack MCP task_read, task_write, and task_check_duplicate tools"
 policy:
   allow_implicit_invocation: true

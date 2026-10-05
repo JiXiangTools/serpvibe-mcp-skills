@@ -16,6 +16,7 @@
       "codex_macos",
       "codex_linux_cli"
     ],
+    "tool_partitioning": "permission_and_confirmation_boundary",
     "transport": "mcp_streamable_http",
     "writable_truth": "elasticsearch"
   },
@@ -36,7 +37,7 @@
       "status": 401
     }
   },
-  "contract_version": 8,
+  "contract_version": 9,
   "idempotency": {
     "caller_reuse_after_receipt_retention": false,
     "mismatch": {
@@ -91,7 +92,214 @@
     }
   },
   "workflow": {
-    "companion_tools": [
+    "identity": "normalized_host + normalized_username",
+    "read_scope": "account:read",
+    "skill_name": "account-management",
+    "tools": [
+      {
+        "actions": [
+          "get",
+          "list"
+        ],
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "readOnlyHint": true
+        },
+        "input_schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "account_ref": {
+                  "type": "string"
+                },
+                "action": {
+                  "const": "get",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "action",
+                "account_ref"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "action": {
+                  "const": "list",
+                  "type": "string"
+                },
+                "cursor": {
+                  "default": null,
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "digital_human_id": {
+                  "default": null,
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "limit": {
+                  "default": 50,
+                  "format": "uint32",
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "url": {
+                  "description": "Website URL. Path, query, fragment, host case, trailing dot, and port do not affect identity.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "action",
+                "url"
+              ],
+              "type": "object"
+            }
+          ],
+          "title": "AccountReadRequest",
+          "type": "object"
+        },
+        "required_scopes": [
+          "account:read"
+        ],
+        "tool_name": "account_read"
+      },
+      {
+        "actions": [
+          "create",
+          "update",
+          "delete"
+        ],
+        "annotations": {
+          "destructiveHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "readOnlyHint": false
+        },
+        "input_schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "action": {
+                  "const": "create",
+                  "type": "string"
+                },
+                "digital_human_id": {
+                  "type": "string"
+                },
+                "password": {
+                  "type": "string"
+                },
+                "request_id": {
+                  "type": "string"
+                },
+                "url": {
+                  "description": "Website URL. Identity uses the same normalized host as website_management.",
+                  "type": "string"
+                },
+                "username": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "action",
+                "request_id",
+                "digital_human_id",
+                "url",
+                "username",
+                "password"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "account_ref": {
+                  "type": "string"
+                },
+                "action": {
+                  "const": "update",
+                  "type": "string"
+                },
+                "digital_human_id": {
+                  "default": null,
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "expected_revision": {
+                  "format": "uint64",
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "password": {
+                  "default": null,
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "request_id": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "action",
+                "request_id",
+                "account_ref",
+                "expected_revision"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "account_ref": {
+                  "type": "string"
+                },
+                "action": {
+                  "const": "delete",
+                  "type": "string"
+                },
+                "expected_revision": {
+                  "format": "uint64",
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "request_id": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "action",
+                "request_id",
+                "account_ref",
+                "expected_revision"
+              ],
+              "type": "object"
+            }
+          ],
+          "title": "AccountWriteRequest",
+          "type": "object"
+        },
+        "required_scopes": [
+          "account:write"
+        ],
+        "tool_name": "account_write"
+      },
       {
         "actions": [
           "start_registration",
@@ -99,11 +307,20 @@
           "start_password_change",
           "resume",
           "observe",
-          "act",
+          "navigate",
+          "click",
+          "fill",
+          "select",
           "inject_credentials",
           "complete",
           "cancel"
         ],
+        "annotations": {
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": true,
+          "readOnlyHint": false
+        },
         "credential_visibility": "server_side_injection_only",
         "external_side_effects": true,
         "idempotency": {
@@ -280,87 +497,43 @@
               "type": "object"
             },
             {
-              "oneOf": [
-                {
-                  "properties": {
-                    "command": {
-                      "const": "navigate",
-                      "type": "string"
-                    },
-                    "url": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "command",
-                    "url"
-                  ],
-                  "type": "object"
-                },
-                {
-                  "properties": {
-                    "command": {
-                      "const": "click",
-                      "type": "string"
-                    },
-                    "element_ref": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "command",
-                    "element_ref"
-                  ],
-                  "type": "object"
-                },
-                {
-                  "properties": {
-                    "command": {
-                      "const": "fill",
-                      "type": "string"
-                    },
-                    "element_ref": {
-                      "type": "string"
-                    },
-                    "text": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "command",
-                    "element_ref",
-                    "text"
-                  ],
-                  "type": "object"
-                },
-                {
-                  "properties": {
-                    "command": {
-                      "const": "select",
-                      "type": "string"
-                    },
-                    "element_ref": {
-                      "type": "string"
-                    },
-                    "value": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "command",
-                    "element_ref",
-                    "value"
-                  ],
-                  "type": "object"
-                }
-              ],
+              "additionalProperties": false,
               "properties": {
                 "action": {
-                  "const": "act",
+                  "const": "navigate",
                   "type": "string"
                 },
                 "action_id": {
                   "description": "Unique within this browser session. Duplicate action IDs are replayed by the worker.",
+                  "type": "string"
+                },
+                "operation_ref": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "action",
+                "operation_ref",
+                "action_id",
+                "url"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "action": {
+                  "const": "click",
+                  "type": "string"
+                },
+                "action_id": {
+                  "description": "Unique within this browser session. Duplicate action IDs are replayed by the worker.",
+                  "type": "string"
+                },
+                "element_ref": {
                   "type": "string"
                 },
                 "operation_ref": {
@@ -370,10 +543,70 @@
               "required": [
                 "action",
                 "operation_ref",
-                "action_id"
+                "action_id",
+                "element_ref"
               ],
-              "type": "object",
-              "unevaluatedProperties": false
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "action": {
+                  "const": "fill",
+                  "type": "string"
+                },
+                "action_id": {
+                  "description": "Unique within this browser session. Duplicate action IDs are replayed by the worker.",
+                  "type": "string"
+                },
+                "element_ref": {
+                  "type": "string"
+                },
+                "operation_ref": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "action",
+                "operation_ref",
+                "action_id",
+                "element_ref",
+                "text"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "action": {
+                  "const": "select",
+                  "type": "string"
+                },
+                "action_id": {
+                  "description": "Unique within this browser session. Duplicate action IDs are replayed by the worker.",
+                  "type": "string"
+                },
+                "element_ref": {
+                  "type": "string"
+                },
+                "operation_ref": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "action",
+                "operation_ref",
+                "action_id",
+                "element_ref",
+                "value"
+              ],
+              "type": "object"
             },
             {
               "additionalProperties": false,
@@ -488,183 +721,7 @@
         "url_semantics": "resource_url_preserved_with_same_normalized_host_navigation"
       }
     ],
-    "identity": "normalized_host + normalized_username",
-    "input_schema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
-      "oneOf": [
-        {
-          "additionalProperties": false,
-          "properties": {
-            "action": {
-              "const": "create",
-              "type": "string"
-            },
-            "digital_human_id": {
-              "type": "string"
-            },
-            "password": {
-              "type": "string"
-            },
-            "request_id": {
-              "type": "string"
-            },
-            "url": {
-              "description": "Website URL. Identity uses the same normalized host as website_management.",
-              "type": "string"
-            },
-            "username": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "action",
-            "request_id",
-            "digital_human_id",
-            "url",
-            "username",
-            "password"
-          ],
-          "type": "object"
-        },
-        {
-          "additionalProperties": false,
-          "properties": {
-            "account_ref": {
-              "type": "string"
-            },
-            "action": {
-              "const": "get",
-              "type": "string"
-            }
-          },
-          "required": [
-            "action",
-            "account_ref"
-          ],
-          "type": "object"
-        },
-        {
-          "additionalProperties": false,
-          "properties": {
-            "action": {
-              "const": "list",
-              "type": "string"
-            },
-            "cursor": {
-              "default": null,
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "digital_human_id": {
-              "default": null,
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "limit": {
-              "default": 50,
-              "format": "uint32",
-              "minimum": 0,
-              "type": "integer"
-            },
-            "url": {
-              "description": "Website URL. Path, query, fragment, host case, trailing dot, and port do not affect identity.",
-              "type": "string"
-            }
-          },
-          "required": [
-            "action",
-            "url"
-          ],
-          "type": "object"
-        },
-        {
-          "additionalProperties": false,
-          "properties": {
-            "account_ref": {
-              "type": "string"
-            },
-            "action": {
-              "const": "update",
-              "type": "string"
-            },
-            "digital_human_id": {
-              "default": null,
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "expected_revision": {
-              "format": "uint64",
-              "minimum": 0,
-              "type": "integer"
-            },
-            "password": {
-              "default": null,
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "request_id": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "action",
-            "request_id",
-            "account_ref",
-            "expected_revision"
-          ],
-          "type": "object"
-        },
-        {
-          "additionalProperties": false,
-          "properties": {
-            "account_ref": {
-              "type": "string"
-            },
-            "action": {
-              "const": "delete",
-              "type": "string"
-            },
-            "expected_revision": {
-              "format": "uint64",
-              "minimum": 0,
-              "type": "integer"
-            },
-            "request_id": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "action",
-            "request_id",
-            "account_ref",
-            "expected_revision"
-          ],
-          "type": "object"
-        }
-      ],
-      "title": "AccountRecordsRequest",
-      "type": "object"
-    },
-    "read_actions": [
-      "get",
-      "list"
-    ],
-    "read_scope": "account:read",
-    "skill_name": "account-management",
-    "tool_name": "account_management",
-    "write_actions": [
-      "create",
-      "update",
-      "delete"
-    ],
+    "workflow_id": "account_management",
     "write_scope": "account:write"
   }
 }

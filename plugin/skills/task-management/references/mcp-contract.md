@@ -2,6 +2,10 @@
 
 Exact actions and fields come from [tool-contract.json](tool-contract.json) or the live MCP schema. A Task defines a dynamic table; each Record is one row.
 
+Use `task_read` for the four read actions and `task_write` for every mutation.
+Use the standalone `task_check_duplicate` tool for duplicate lookup;
+`task_management` is the internal Workflow ID, not an MCP tool name.
+
 ## Idempotency and revisions
 
 - `request_id` is globally unique forever and may be reused only for the identical retry. Changed input returns `rejected / request_id_reused`.
@@ -27,7 +31,7 @@ Exact actions and fields come from [tool-contract.json](tool-contract.json) or t
 
 ## Duplicate checks
 
-- `check_duplicate` normalizes the required resource `url` and returns `duplicate_checked` with `exists: bool`.
+- `task_check_duplicate` accepts a direct object without `action`, normalizes the required resource `url`, and returns `duplicate_checked` with `exists: bool`.
 - With URL alone it searches globally. Optional `task_ref` and `task_name` are AND conditions; there is no `scope`, field-name, `values`, or query parameter.
 - It works without a Task write-dedupe rule.
 - Completed, reserved, and uncertain Records count as existing. Failed and duplicate audit rows do not.

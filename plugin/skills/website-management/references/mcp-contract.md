@@ -2,6 +2,10 @@
 
 Exact actions and fields come from [tool-contract.json](tool-contract.json) or the live MCP schema.
 
+Use `website_read` for `get`, `list`, `list_dimensions`, and `list_tags`. Use
+`website_write` for all catalog and registry mutations. `website_management` is
+the internal Workflow ID, not an MCP tool name.
+
 ## Identity and projections
 
 - Canonical and alias lookup uses exact normalized-host identity, never full-text matching. URL input may omit the scheme; `www` stays distinct.

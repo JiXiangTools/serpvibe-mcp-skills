@@ -6,6 +6,6 @@ dependencies:
   tools:
     - type: "mcp"
       value: "search-stack-mcp"
-      description: "Search Stack MCP account_management and account_browser tools"
+      description: "Search Stack MCP account_read, account_write, and account_browser tools"
 policy:
   allow_implicit_invocation: true

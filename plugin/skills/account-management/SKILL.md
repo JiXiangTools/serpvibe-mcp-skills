@@ -1,26 +1,27 @@
 ---
 name: account-management
-description: Manage website credentials and operate registration, login, or password changes with the Search Stack account_management and account_browser tools. Use for account lifecycle work, not website catalog data, tasks, or memory.
+description: Manage website credentials and operate registration, login, or password changes with the Search Stack account_read, account_write, and account_browser tools. Use for account lifecycle work, not website catalog data, tasks, or memory.
 ---
 
 # Account Management
 
-Use only the exact MCP tools `account_management` and `account_browser`. Do not use raw Elasticsearch, guessed tool names, a local credential copy, or a general browser tool for passwords. If a required tool/action is absent, or the connector validates it as another action, stop and refresh or reconnect the MCP before starting a new session; updating this Skill alone does not refresh tool schemas.
+Use only the exact MCP tools `account_read`, `account_write`, and `account_browser`. Do not use the internal Workflow ID `account_management` as a tool name. Do not use raw Elasticsearch, guessed tool names, a local credential copy, or a general browser tool for passwords. If a required tool/action is absent, or the connector validates it as another action, stop and refresh or reconnect the MCP before starting a new session; updating this Skill alone does not refresh tool schemas.
 
 ## Choose the operation
 
-- `create`: save a new website account.
-- `get`: read one known `account_ref`.
-- `list`: find accounts for a URL, optionally narrowed by DigitalHuman.
-- `update`: change the password or DigitalHuman owner.
-- `delete`: retire a credential while preserving its identity tombstone.
+- `account_read` with `get`: read one known `account_ref`.
+- `account_read` with `list`: find accounts for a URL, optionally narrowed by DigitalHuman.
+- `account_write` with `create`: save a new website account.
+- `account_write` with `update`: change the password or DigitalHuman owner.
+- `account_write` with `delete`: retire a credential while preserving its identity tombstone.
 
 Use `account_browser` when the requested outcome happens on a website:
 
 - `start_registration`: generate a password server-side and open the exact registration URL.
 - `start_login`: open the exact login URL for a stored `account_ref`.
 - `start_password_change`: escrow a generated new password and open the settings URL.
-- `observe` / `act`: inspect elements and fill only non-secret fields.
+- `observe`: inspect the current page and its redacted interactive elements.
+- `navigate`, `click`, `fill`, `select`: operate the page with a session-unique `action_id`; each is a top-level action.
 - `inject_credentials`: identify the returned username/password element refs; the service injects secrets without returning them.
 - `complete`: call only after the page proves success; this commits the registered or changed credential.
 - `resume`: recreate a lost browser session from durable operation state.
@@ -35,9 +36,9 @@ Inspect the live tool schema for exact fields. Use [references/tool-contract.jso
 - Send passwords as plaintext MCP fields. The server encrypts storage. Credential reads through `get` and `list` always return plaintext passwords.
 - For website registration, login, or password changes, prefer `account_browser`; do not first read a password and copy it into another tool. `account_browser` has no password input or output.
 - Browser page URLs preserve path and query case. They must remain on the account's normalized host; use only `element_ref` values from the latest snapshot.
-- Keep `act` arguments flat: `command` is a sibling of `action`, `operation_ref`, and `action_id`, not a nested object. `navigate` adds `url`; `click` adds `element_ref`; `fill` adds `element_ref` and `text`; `select` adds `element_ref` and `value`.
-- Never use `act.fill` for a password field. Use `inject_credentials`, even if another tool could reveal the password.
-- Treat `act`, `inject_credentials`, and `complete` as external side effects. Never bypass CAPTCHA, email/device verification, or user confirmation.
+- Do not send `act` or `command`. Use the direct `navigate`, `click`, `fill`, or `select` action with the fields required by that action.
+- Never use `fill` for a password field. Use `inject_credentials`, even if another tool could reveal the password.
+- Treat `navigate`, `click`, `fill`, `select`, `inject_credentials`, and `complete` as external side effects. Never bypass CAPTCHA, email/device verification, or user confirmation.
 - Registration and password change are two-phase operations. Call `complete` only after visible site success. On `reconciliation_required`, re-read the account revision and retry `complete` with that revision; do not generate a second password.
 - Never place a returned password in summaries, logs, tasks, website records, memory, evidence, or `request_id`.
 - Every mutation needs a globally unique `request_id` that is never recycled; reuse it only for the identical retry. `update` and `delete` also need the current revision.

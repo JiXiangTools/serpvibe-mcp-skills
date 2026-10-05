@@ -18,6 +18,13 @@ short-lived Bearer Tokens and never receive the MCP server's Elasticsearch API
 key. Account, website, and task read/write permissions are granted as OAuth
 scopes by the service administrator.
 
+The installed MCP surface contains exactly eight tools:
+`account_read`, `account_write`, `account_browser`, `website_read`,
+`website_write`, `task_read`, `task_write`, and `task_check_duplicate`.
+The `*_management` names are internal Workflow IDs, not callable tools.
+Read-only tools are separated from state-changing tools so compatible hosts can
+apply confirmation policy from each tool's actual intent.
+
 ## Repository boundary
 
 This repository contains instructions, tool contracts, and connection
@@ -56,7 +63,8 @@ The resulting access token is short-lived and scoped; the MCP server's
 Elasticsearch API key is never distributed to the client.
 
 Updating this plugin or its Skills does not by itself refresh a connector's
-saved MCP tool schema. After a release changes tool actions or parameters,
+saved MCP tool schema. After a release changes tool names, descriptions,
+actions, input schemas, or annotations,
 refresh or reconnect `search-stack-mcp` and start a new session. In ChatGPT
 Developer Mode, use `Refresh` on the plugin connection detail page. If another
 client has no schema-refresh action, remove and re-add the MCP connection. Do
