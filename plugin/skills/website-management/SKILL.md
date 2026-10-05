@@ -5,11 +5,11 @@ description: Find and maintain websites and controlled tags with the Search Stac
 
 # Website Management
 
-Use only the exact MCP tools `website_read` and `website_write`. `website_management` is an internal Workflow ID whose former public tool name is retired; never call it. If it appears in the current tool list, or a read-only call is reported as user-cancelled without an explicit user rejection, the connector or session has stale schema or annotations. Stop without retrying or substituting another tool, refresh or reconnect the MCP, verify the exact current tools, and start a new session. Updating this Skill alone does not refresh tool schemas. Do not use raw Elasticsearch, guessed tool names, or a local catalog copy.
+Use only `website_read` and `website_write`; never call the internal Workflow ID `website_management`. If that old name appears, or a read-only call is cancelled without an explicit user rejection, refresh or reconnect the MCP and start a new session because its saved schema is stale. Updating this Skill alone does not refresh connector schemas. Do not substitute tools or use raw Elasticsearch, guessed tool names, or a local catalog copy.
 
 ## Choose the operation
 
-- `website_read` with `get`: resolve a canonical or alias URL to one website; use it as the advisory duplicate check before `create`.
+- `website_read` with `get`: resolve a canonical or alias URL to one website.
 - `website_read` with `list`: browse by exploration status or controlled tags.
 - `website_read` with `list_dimensions` or `list_tags`: inspect the controlled registry.
 - `website_write` with `create`: add a website that is not already represented.
@@ -23,7 +23,7 @@ Inspect the live tool schema for exact fields. Use [references/tool-contract.jso
 ## Rules
 
 - Pass observed URLs directly. Website identity is the normalized host, so scheme, port, path, query, fragment, case, and trailing dot are ignored. Do not strip `www` or invent aliases.
-- Before `create`, call `website_read` with `get` for the candidate URL. `website_found` means reuse or update that Website; `website_not_found` only permits a create attempt and is not a uniqueness guarantee. Treat `conflict / website_exists` or `invalid / host_already_claimed` from `create` as the authoritative duplicate result, inspect the existing Website, and never retry the changed request under a new `request_id`.
+- Before `create`, `get` the candidate URL. If found, reuse or update it; if not found, try `create`. Treat `website_exists` or `host_already_claimed` as a duplicate: inspect the existing Website and stop without changing the `request_id`.
 - This catalog identifies sites, not pages. Use Task Record resource URLs when path or query distinguishes the item.
 - Use `summary` for lists, `standard` for normal lookup, and `full` only when detailed evidence, traffic, or deletion data is needed. An omitted projected field is not proof that stored data is absent.
 - Record observed facts only. Aliases must be verified; evidence should be concise and attributable. Keep `invalid` exploration as negative knowledge rather than deleting it.
