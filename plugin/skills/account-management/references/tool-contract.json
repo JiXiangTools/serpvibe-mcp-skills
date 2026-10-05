@@ -37,7 +37,7 @@
       "status": 401
     }
   },
-  "contract_version": 9,
+  "contract_version": 10,
   "idempotency": {
     "caller_reuse_after_receipt_retention": false,
     "mismatch": {
@@ -206,7 +206,7 @@
                   "type": "string"
                 },
                 "url": {
-                  "description": "Website URL. Identity uses the same normalized host as website_management.",
+                  "description": "Website URL. Identity uses the same normalized host as `website_read` and `website_write`.",
                   "type": "string"
                 },
                 "username": {
