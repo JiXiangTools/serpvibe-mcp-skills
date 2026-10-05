@@ -20,6 +20,8 @@ the internal Workflow ID, not an MCP tool name.
 
 ## Consistency
 
+- Before `create`, use `website_read` with `get` as an advisory duplicate lookup for the candidate URL. `website_found` means use the existing Website; `website_not_found` does not reserve the host.
+- `create` is the authoritative write boundary. `conflict / website_exists` means the candidate host resolved to an existing Website, while `invalid / host_already_claimed` means a canonical or supplied alias host is already owned. Inspect the existing Website instead of changing the request or `request_id` and retrying.
 - `request_id` is globally unique forever and may be reused only for the identical retry. Changed input returns `rejected / request_id_reused`.
 - Existing-resource mutations use revision CAS. A stale revision returns `conflict / revision_conflict`; re-read before deciding.
 - Delete is a soft tombstone. Default reads hide deleted websites; an `invalid` exploration status remains active negative knowledge.
