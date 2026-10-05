@@ -37,7 +37,7 @@
       "status": 401
     }
   },
-  "contract_version": 10,
+  "contract_version": 11,
   "idempotency": {
     "caller_reuse_after_receipt_retention": false,
     "mismatch": {
@@ -94,11 +94,17 @@
   "workflow": {
     "batch_create": {
       "action": "create_records",
+      "default_outcome": "completed",
       "idempotency": "per_item_request_id",
       "max_items": 500,
       "min_items": 1,
       "partial_results": true,
-      "result_order": "input_order"
+      "result_order": "input_order",
+      "supported_outcomes": [
+        "completed",
+        "failed",
+        "uncertain"
+      ]
     },
     "column_keys": {
       "invalid_code": "invalid_column_key",
@@ -145,6 +151,14 @@
     },
     "identity": "task_ref and record_ref; read duplicate identity is normalized resource URL with optional task conditions; write dedupe is task-defined",
     "read_scope": "task:read",
+    "retry": {
+      "action": "retry_record",
+      "lease_semantics": "same_as_reserve_record",
+      "lineage_field": "retry_of",
+      "new_status": "reserved",
+      "source_mutation": "none",
+      "source_status": "failed"
+    },
     "skill_name": "task-management",
     "tools": [
       {
@@ -329,6 +343,7 @@
           "delete_task",
           "create_records",
           "reserve_record",
+          "retry_record",
           "renew_reservation",
           "finish_record",
           "resolve_record",
@@ -429,6 +444,10 @@
             "CreateRecordInput": {
               "additionalProperties": false,
               "properties": {
+                "outcome": {
+                  "$ref": "#/$defs/FinishOutcome",
+                  "default": "completed"
+                },
                 "request_id": {
                   "type": "string"
                 },
@@ -763,6 +782,43 @@
                 "request_id",
                 "task_ref",
                 "values"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "action": {
+                  "const": "retry_record",
+                  "type": "string"
+                },
+                "expected_revision": {
+                  "format": "uint64",
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "lease_seconds": {
+                  "default": 300,
+                  "format": "uint32",
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "record_ref": {
+                  "type": "string"
+                },
+                "request_id": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "action",
+                "request_id",
+                "record_ref",
+                "expected_revision",
+                "reason"
               ],
               "type": "object"
             },

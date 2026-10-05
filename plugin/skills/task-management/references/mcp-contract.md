@@ -20,14 +20,16 @@ Use the standalone `task_check_duplicate` tool for duplicate lookup;
 
 ## Records and leases
 
-- `create_records` writes 1–500 completed facts and is also the single-fact interface. Results preserve input order and report per-item outcome, code, and references plus batch counts. Batches of 100–200 are the normal default; use the maximum only for small records when fewer round trips matter.
+- `create_records` imports 1–500 facts and is also the single-fact interface. Each item may declare `outcome` as `completed`, `failed`, or `uncertain`; omission remains `completed`. Here `failed` means confirmed no external effect, including researched but not submitted. Results preserve input order and report per-item operation outcome, code, and references plus batch counts. Batches of 100–200 are the normal default; use the maximum only for small records when fewer round trips matter.
 - Batch items are independent: one invalid, conflicting, or unavailable item does not roll back successful items. The whole batch is rejected before writes only when its shape is invalid, including empty or oversized input and repeated item `request_id` values.
 - Retry the identical batch or only failed items with their original `request_id`. Do not assign new IDs to successful items. The HTTP body limit may impose a lower practical item count for large values.
 - If the connector rejects `create_records` as though `action` must equal another value, its cached tool schema is stale. Refresh or reconnect the MCP and start a new session; updating the Skill alone is insufficient. A connector-local rejection may be retried with the original item IDs, but ambiguous delivery requires a state check first.
 - `reserve_record` remains single-item because it atomically checks write dedupe and creates a lease before an external effect.
+- `retry_record` accepts the original `failed` Record reference, revision, reason, and lease duration. It reuses the server-stored values, schema version, and dedupe identity, and creates a new reserved Record whose `retry_of` points to the source. It never accepts a replacement URL or values and never reopens the source Record.
 - Only `record_reserved` permits the caller to proceed. Renew long-running work before expiry, then call `finish_record`.
 - `failed` means the effect definitely did not happen and releases the claim. `uncertain` keeps the claim until external verification and `resolve_record`.
 - An expired lease becomes uncertain and is never automatically reassigned. `busy`, `lease_lost`, and `uncertain` require inspection rather than blind retry.
+- A `completed` or `duplicate` retry source returns `conflict / duplicate`; an `uncertain` source returns `conflict / uncertain`; a reserved source returns `conflict / busy`. Resolve uncertain work first and retry only after it is confirmed failed.
 
 ## Duplicate checks
 
