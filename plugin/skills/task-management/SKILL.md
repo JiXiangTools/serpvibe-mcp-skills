@@ -5,7 +5,7 @@ description: Track table-shaped work, row results, reservations, and duplicate c
 
 # Task Management
 
-Use only the exact MCP tools `task_read`, `task_write`, and `task_check_duplicate`. Do not use the internal Workflow ID `task_management` as a tool name. A Task is a table definition; a Record is one row. Do not use raw Elasticsearch, guessed tool names, or a local task copy. If a required tool/action is absent, or the connector validates it as another action, stop and refresh or reconnect the MCP before starting a new session; updating this Skill alone does not refresh tool schemas.
+Use only the exact MCP tools `task_read`, `task_write`, and `task_check_duplicate`. `task_management` is an internal Workflow ID whose former public tool name is retired; never call it. If it appears in the current tool list, or a read-only call is reported as user-cancelled without an explicit user rejection, the connector or session has stale schema or annotations. Stop without retrying or substituting another tool, refresh or reconnect the MCP, verify the exact current tools, and start a new session. Updating this Skill alone does not refresh tool schemas. A Task is a table definition; a Record is one row. Do not use raw Elasticsearch, guessed tool names, or a local task copy.
 
 ## Choose the operation
 
