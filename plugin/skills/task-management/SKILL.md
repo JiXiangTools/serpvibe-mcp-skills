@@ -5,34 +5,51 @@ description: Track table-shaped work, row results, reservations, and duplicate c
 
 # Task Management
 
-Use only the exact MCP tools `task_read`, `task_write`, and `task_check_duplicate`. `task_management` is an internal Workflow ID whose former public tool name is retired; never call it. If it appears in the current tool list, or a read-only call is reported as user-cancelled without an explicit user rejection, the connector or session has stale schema or annotations. Stop without retrying or substituting another tool, refresh or reconnect the MCP, verify the exact current tools, and start a new session. Updating this Skill alone does not refresh tool schemas. A Task is a table definition; a Record is one row. Do not use raw Elasticsearch, guessed tool names, or a local task copy.
+A Task is a table; a Record is one attempt or recorded fact. Use `task_read`,
+`task_write`, and `task_check_duplicate`. Another authorized tool performs the
+external work. Keep credentials and browser sessions out of task records.
 
-## Choose the operation
+## Choose the action
 
-- `task_check_duplicate`: advisory URL existence check; pass `url` and optional `task_ref` / `task_name` directly, with no `action`.
-- `task_read`: inspect Tasks or Records with `get_task`, `list_tasks`, `get_record`, or `list_records`.
-- `task_write` with `create_records`: import 1–500 facts with a known outcome; use a one-item batch for a single fact. Omitted `outcome` means `completed`.
-- `task_write` with `reserve_record`: claim work before an external side effect.
-- `task_write` with `retry_record`: create a new leased attempt from an existing `failed` Record without resupplying its URL or values.
-- `task_write` with `renew_reservation`: extend a live claim.
-- `task_write` with `finish_record`: close reserved work as completed, failed, or uncertain.
-- `task_write` with `resolve_record`: reconcile uncertain work after checking the external system.
-- `task_write`: create, update, complete/cancel, or tombstone Tasks and Records.
+- Inspect: `task_read` with `get_task`, `list_tasks`, `get_record`, or `list_records`.
+- Create, update, complete or cancel a Task with `task_write`; define only the
+  business columns needed for the work.
+- Check a URL: `task_check_duplicate` with `url`; optional `task_ref` and
+  `task_name` narrow the search together. No `action` or `scope`. `exists` is
+  advisory, not permission to execute.
+- Import known results: `task_write` with `create_records`, 1–500 items and an
+  explicit outcome per item. A single fact is a one-item batch. Inspect each
+  result because a batch may partially succeed.
+- Start work: `reserve_record`; continue a failed attempt: `retry_record` with
+  its reference, current revision, and reason. Proceed only on `record_reserved`.
+  Renew before the lease expires, then close with `finish_record`.
+- Reconcile an unknown result: verify externally, then `resolve_record`.
+- Correct a mistaken completion: verify that the target action did not happen,
+  then `correct_record_outcome` with the record reference, current revision,
+  reason, and evidence. Success changes it to `failed`; use `retry_record` to
+  obtain a new attempt and lease. Correction alone does not permit execution.
 
-Inspect the live tool schema for exact fields. Use [references/tool-contract.json](references/tool-contract.json) only to verify generated schema, defaults, or scopes. Consult [references/mcp-contract.md](references/mcp-contract.md) before using dedupe, leases, uncertain resolution, or terminal task actions.
+## Choose the outcome
 
-## Rules
+- `completed`: the intended action happened. Finishing research, signing in,
+  pausing, or merely saving a row does not complete a submission.
+- `failed`: the intended action definitely did not happen; it may be retried.
+- `uncertain`: the action may have happened; verify it before another attempt.
 
-- Define only needed columns. Business keys and values remain under `record.values`, so common names such as `result`, `status`, `revision`, and `task_ref` are valid and never collide with system fields. Follow the live key schema's syntax and sensitive-data restrictions.
-- In `create_records`, give every item its own permanently unique `request_id` and classify its known outcome: `completed` for confirmed success, `failed` for confirmed no external effect (including researched but not submitted), or `uncertain` when the effect cannot be verified. Omission remains `completed`. Inspect every ordered item result; batches may partially succeed. Retry the unchanged batch or only failed items, never rewrite successful items under new IDs. Prefer 100–200 items unless small records justify using the 500-item maximum.
-- Add a write dedupe rule only when uniqueness matters; default to global unless uniqueness is intentionally per Task.
-- Research before taking an execution lease. Immediately before an external side effect, call `reserve_record`, or `retry_record` when continuing a known `failed` Record, and proceed only after `record_reserved`. Finish promptly and renew before a lease expires.
-- Mark `failed` only when the effect definitely did not happen. If it may have happened, use `uncertain`, verify externally, then resolve it.
-- Retry only a current `failed` Record with its `record_ref` and revision. Do not delete history, alter a URL, or reconstruct values to bypass dedupe. The new reserved Record links back through `retry_of`; `completed` and `uncertain` remain blocked.
-- `task_check_duplicate` takes `url` directly; add `task_ref` and/or `task_name` as AND conditions. Never pass `action`, `scope`, or `values`. It returns `exists` and is never permission to act.
-- URL columns are resource URLs: path and query remain identity-bearing. Do not collapse them to website hosts.
-- Every mutation needs a globally unique `request_id` that is never recycled; reuse it only for the identical retry. Existing-resource changes also need the current revision.
-- A connector-side schema rejection does not authorize new per-item IDs or a substitute action. After refresh, retry the identical batch or only its unconfirmed items with their original IDs; if delivery was ambiguous, inspect current state first.
-- Treat `conflict`, `busy`, `lease_lost`, and `uncertain` as reasons to inspect current state, not to retry blindly.
-- Complete or cancel a Task only after reserved and uncertain Records are resolved. Deletion is a tombstone and does not erase completed dedupe facts.
-- Keep credentials, sessions, raw transcripts, memory, and full website/account documents out of task records. This Skill tracks work; another authorized tool performs it.
+`create_records` defaults to `completed` when outcome is omitted. Changing a
+business field such as `values.status` does not change the system outcome.
+Missing receipts or a duplicate warning alone do not justify correction.
+Preserve history and identity; do not delete records or change URLs to bypass
+duplicate protection.
+
+Every mutation needs a globally unique `request_id` (per item for imports).
+Reuse it only for an identical retry. Existing-record changes need the current
+revision. After a conflict, re-read; after an ambiguous response, inspect state
+before acting. Complete or cancel a Task only when reserved and uncertain work
+is resolved; terminal Tasks accept no new attempts.
+
+Use the live tool schema for fields. Read [usage details](references/mcp-contract.md)
+for correction, leases, and dedupe; [tool-contract.json](references/tool-contract.json)
+is the generated schema reference. If a new action is missing from the host's
+schema, refresh its tool definitions to discover it; existing actions remain
+usable. A cancellation message alone does not identify the failure's cause.

@@ -37,7 +37,7 @@
       "status": 401
     }
   },
-  "contract_version": 11,
+  "contract_version": 12,
   "idempotency": {
     "caller_reuse_after_receipt_retention": false,
     "mismatch": {
@@ -348,7 +348,8 @@
           "finish_record",
           "resolve_record",
           "update_record",
-          "delete_record"
+          "delete_record",
+          "correct_record_outcome"
         ],
         "annotations": {
           "destructiveHint": true,
@@ -950,6 +951,46 @@
                 "expected_revision",
                 "resolution",
                 "reason"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "action": {
+                  "const": "correct_record_outcome",
+                  "type": "string"
+                },
+                "evidence": {
+                  "type": "string"
+                },
+                "expected_revision": {
+                  "format": "uint64",
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "record_ref": {
+                  "type": "string"
+                },
+                "request_id": {
+                  "type": "string"
+                },
+                "values_patch": {
+                  "additionalProperties": true,
+                  "default": {},
+                  "type": "object"
+                }
+              },
+              "required": [
+                "action",
+                "request_id",
+                "record_ref",
+                "expected_revision",
+                "reason",
+                "evidence"
               ],
               "type": "object"
             },

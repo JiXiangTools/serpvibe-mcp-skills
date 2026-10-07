@@ -1,46 +1,69 @@
-# Task behavior
+# Task usage details
 
-Exact actions and fields come from [tool-contract.json](tool-contract.json) or the live MCP schema. A Task defines a dynamic table; each Record is one row.
+Use the live schema or [tool-contract.json](tool-contract.json) for exact fields.
 
-Use `task_read` for the four read actions and `task_write` for every mutation.
-Use the standalone `task_check_duplicate` tool for duplicate lookup;
-`task_management` is the internal Workflow ID, not an MCP tool name.
+## Continue work
 
-## Idempotency and revisions
+| Current system status | Next action |
+| --- | --- |
+| `failed` | `retry_record` with its reference, current revision, and reason |
+| `uncertain` | Verify externally; `resolve_record` as completed or failed |
+| `completed`, but completion was a verified recording error | `correct_record_outcome`, then `retry_record` |
+| `reserved` | Continue with the valid lease; renew before expiry |
+| `completed` with a real external result, or `duplicate` | Preserve the result; do not resubmit |
 
-- `request_id` is globally unique forever and may be reused only for the identical retry. Changed input returns `rejected / request_id_reused`.
-- `create_records` carries `request_id` per item rather than at batch level. A batch is an ordered processing container, not one atomic mutation.
-- Existing-resource mutations use revision CAS. A stale revision returns `conflict`; re-read before deciding.
+For correction, call `task_write` with:
 
-## Dynamic column namespace
+```json
+{
+  "action": "correct_record_outcome",
+  "request_id": "unique-correction-id",
+  "record_ref": "<original record reference>",
+  "expected_revision": 5,
+  "reason": "A login checkpoint was recorded as submission completion",
+  "evidence": "Describe the verified external evidence that the target action did not occur"
+}
+```
 
-- Column keys and their values are always nested under `record.values`; system fields remain at the Record root and never share that namespace.
-- Common business keys such as `result`, `status`, `revision`, and `task_ref` are valid. Do not rename them merely because an identically named system field exists outside `values`.
-- The live key schema defines lowercase identifier syntax and rejects credential/session-like names. The runtime uses the same policy constants and returns `invalid / invalid_column_key` for violations.
+Replace the example reference, revision, ID, reason, and evidence with current
+facts. Evidence must be nonempty and at most 8192 UTF-8 bytes; reason must be
+nonempty and at most 2000 characters. Optional `values_patch` updates business
+notes without changing dedupe fields. The server stores the supplied evidence;
+the caller must verify its truth. A missing receipt alone is insufficient.
 
-## Records and leases
+Success returns `record_outcome_corrected` and the corrected Record, with no
+lease. Pass its reference and returned revision to `retry_record` with a new
+request ID and reason. Only `record_reserved` allows execution. The new Record's
+`retry_of` links to the source; historical evidence is retained. A stale revision
+returns `revision_conflict`; a non-completed source returns `record_not_completed`.
 
-- `create_records` imports 1–500 facts and is also the single-fact interface. Each item may declare `outcome` as `completed`, `failed`, or `uncertain`; omission remains `completed`. Here `failed` means confirmed no external effect, including researched but not submitted. Results preserve input order and report per-item operation outcome, code, and references plus batch counts. Batches of 100–200 are the normal default; use the maximum only for small records when fewer round trips matter.
-- Batch items are independent: one invalid, conflicting, or unavailable item does not roll back successful items. The whole batch is rejected before writes only when its shape is invalid, including empty or oversized input and repeated item `request_id` values.
-- Retry the identical batch or only failed items with their original `request_id`. Do not assign new IDs to successful items. The HTTP body limit may impose a lower practical item count for large values.
-- If the connector rejects `create_records` as though `action` must equal another value, its cached tool schema is stale. Refresh or reconnect the MCP and start a new session; updating the Skill alone is insufficient. A connector-local rejection may be retried with the original item IDs, but ambiguous delivery requires a state check first.
-- `reserve_record` remains single-item because it atomically checks write dedupe and creates a lease before an external effect.
-- `retry_record` accepts the original `failed` Record reference, revision, reason, and lease duration. It reuses the server-stored values, schema version, and dedupe identity, and creates a new reserved Record whose `retry_of` points to the source. It never accepts a replacement URL or values and never reopens the source Record.
-- Only `record_reserved` permits the caller to proceed. Renew long-running work before expiry, then call `finish_record`.
-- `failed` means the effect definitely did not happen and releases the claim. `uncertain` keeps the claim until external verification and `resolve_record`.
-- An expired lease becomes uncertain and is never automatically reassigned. `busy`, `lease_lost`, and `uncertain` require inspection rather than blind retry.
-- A `completed` or `duplicate` retry source returns `conflict / duplicate`; an `uncertain` source returns `conflict / uncertain`; a reserved source returns `conflict / busy`. Resolve uncertain work first and retry only after it is confirmed failed.
+`retry_record` also requires an active parent Task and a free duplicate claim.
+It returns `busy`, `uncertain`, or `duplicate` when another attempt blocks it.
+Leases default to 300 seconds, configurable from 30 to 1800. An expired lease
+becomes uncertain; inspect and reconcile before retrying. Do not keep an
+execution lease merely while researching or waiting for login.
 
-## Duplicate checks
+## Import and update
 
-- `task_check_duplicate` accepts a direct object without `action`, normalizes the required resource `url`, and returns `duplicate_checked` with `exists: bool`.
-- With URL alone it searches globally. Optional `task_ref` and `task_name` are AND conditions; there is no `scope`, field-name, `values`, or query parameter.
-- It works without a Task write-dedupe rule.
-- Completed, reserved, and uncertain Records count as existing. Failed and duplicate audit rows do not.
+`create_records` accepts 1–500 items, each with its own `request_id`, `values`,
+and outcome. Prefer 100–200 per request; use larger batches for small records.
+Results follow input order. Retry identical unconfirmed items with their original
+IDs. Changed input under a used ID returns `request_id_reused`.
 
-## Write dedupe and lifecycle
+Business values live under `record.values`; names such as `status` and `result`
+are business columns and do not replace system fields. Define only needed
+columns, following the live schema's naming rules. Credentials and sessions
+belong in account/browser tools.
 
-- A Task may define one ordered write-dedupe rule. Global scope shares compatible rules across Tasks; task scope adds `task_ref`.
-- URL dedupe preserves path/query case and order while normalizing scheme, IDNA host, host case/trailing dot, default port, fragment, and empty path.
-- Dedupe values are immutable. Deleting a completed Record does not release its identity.
-- Completed or cancelled Tasks reject new Records. Complete or cancel only after reserved and uncertain work is resolved. Delete accepts only a terminal Task and creates a tombstone.
+## Duplicate identity
+
+`task_check_duplicate` searches globally by normalized resource URL unless
+`task_ref` or `task_name` narrows it. Completed, reserved, and uncertain records
+count as existing; failed and duplicate audit rows do not. Its boolean result
+does not reserve work or explain which record owns the claim.
+
+Write dedupe is the Task's configured rule. Use global scope when compatible
+Tasks should share uniqueness. Resource URLs preserve path and query identity;
+do not reduce them to hosts. Dedupe fields are immutable. Deleting a completed
+Record does not free its identity, and correcting a Record does not reopen a
+completed or cancelled Task.
