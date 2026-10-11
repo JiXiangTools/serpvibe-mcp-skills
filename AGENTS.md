@@ -1,5 +1,23 @@
 # Repository Instructions
 
+## Repository Role
+
+This repository is the central collection and external publication home for
+Skills from all Serpvibe projects. Project repositories continue to own their
+application and runtime code, while reusable Skill source is consolidated here
+so review, compatibility, packaging, and release have one source of truth.
+
+- Store cross-project Skill source under `skills/<skill-name>/`. Treat that copy
+  as canonical; do not maintain divergent copies in application repositories.
+- In each originating project, replace the local
+  `<project-root>/skills/<skill-name>` directory with a symlink to this
+  repository's canonical `skills/<skill-name>` directory. Use project-level
+  links only; do not install these development links into `~/.codex/skills`.
+- `plugin/` is a separately installable public surface. Adding a Skill to the
+  root collection does not add it to a plugin automatically. Keep unfinished or
+  unapproved work under `staging/unpublished-skills/`, and change the plugin
+  surface only with the approval required below.
+
 ## External Interface Freeze (Owner Requirement)
 
 Externally exposed interfaces are frozen once published. This includes MCP endpoint
@@ -29,4 +47,3 @@ behavior relied on by clients, and the matching Skill or plugin contract.
   tools/call shapes, and verify representative old-client calls against the
   release candidate. If compatibility cannot be maintained, do not deploy; ask
   the user for a decision.
-
