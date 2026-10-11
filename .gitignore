@@ -5,3 +5,5 @@
 __pycache__/
 *.py[cod]
 *.zip
+__pycache__/
+*.py[cod]

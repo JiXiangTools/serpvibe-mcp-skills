@@ -1,8 +1,8 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "serpvibe-search-stack",
-  "version": "0.4.10",
-  "description": "Serpvibe skills and the authenticated Search Stack MCP connection for typed business workflows.",
+  "version": "0.4.11",
+  "description": "Shared Serpvibe skills, including the authenticated Search Stack MCP workflows and LAN proxy access.",
   "author": {
     "name": "Serpvibe",
     "url": "https://github.com/JiXiangTools"

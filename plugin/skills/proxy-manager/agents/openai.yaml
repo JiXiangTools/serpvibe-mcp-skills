@@ -1,0 +1,6 @@
+interface:
+  display_name: "代理管理"
+  short_description: "从局域网服务获取并管理代理租约"
+  default_prompt: "使用 $proxy-manager 为当前任务获取合适的局域网代理，并正确释放租约或上报失败。"
+policy:
+  allow_implicit_invocation: true

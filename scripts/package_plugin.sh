@@ -5,7 +5,24 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PLUGIN_ROOT="$ROOT/plugin"
 OUTPUT_ROOT="${PLUGIN_OUTPUT_ROOT:-$ROOT/target/plugins}"
 PRODUCTION_WORKFLOWS=(account_management website_management task_management)
-EXPECTED_SKILLS=$'account-management\ntask-management\nwebsite-management'
+STANDALONE_SKILLS=(proxy-manager)
+EXPECTED_SKILLS=$'account-management\nproxy-manager\ntask-management\nwebsite-management'
+MCP_RESOURCE_URI="https://mcp-serpvibe.ficory.com/mcp"
+OAUTH_PRIMARY_REGISTRATION="cimd"
+OAUTH_COMPATIBLE_REGISTRATIONS=(cimd dcr)
+OAUTH_SCOPES=(
+    account:read
+    account:write
+    website:read
+    website:write
+    task:read
+    task:write
+)
+OAUTH_BASE_SCOPES=(offline_access "${OAUTH_SCOPES[@]}")
+OPENAI_CIMD_CLIENTS=(
+    https://chatgpt.com/oauth/codex/client.json
+    https://chatgpt.com/oauth/client.json
+)
 
 die() {
     echo "plugin packaging failed: $*" >&2
@@ -15,6 +32,35 @@ die() {
 [[ $# -le 1 ]] || die "usage: $0 [release-id]"
 [[ -f "$PLUGIN_ROOT/plugin.json" ]] || die "missing plugin/plugin.json"
 [[ -f "$PLUGIN_ROOT/mcp.json" ]] || die "missing plugin/mcp.json"
+python3 "$ROOT/scripts/codex_plugin_preflight.py" --repository "$ROOT" >&2 || \
+    die "the installed Codex runtime cannot load the release candidate"
+jq -e \
+    --arg resource "$MCP_RESOURCE_URI" \
+    --argjson base_scopes "$(jq -cn --args '$ARGS.positional' "${OAUTH_BASE_SCOPES[@]}")" '
+    .mcpServers["search-stack-mcp"].type == "streamable-http"
+    and .mcpServers["search-stack-mcp"].url == $resource
+    and .mcpServers["search-stack-mcp"].extensions["com.openai"].auth == {
+        type: "oauth",
+        client: {mode: "cimd"},
+        resource: $resource,
+        baseScopes: $base_scopes,
+        defaultScopes: [],
+        oidcEnabled: false
+    }
+' "$PLUGIN_ROOT/mcp.json" >/dev/null || die "search-stack-mcp resource URI differs from the production OAuth contract"
+rg -Fq '`client.mode = cimd`' "$ROOT/README.md" || \
+    die "README must document CIMD as the packaged OpenAI client mode"
+if rg -Fq -- '--oauth-client-registration dcr' "$ROOT/README.md"; then
+    die "README must not make DCR the primary Codex login"
+fi
+rg -Fq '`oidcEnabled = false`' "$ROOT/README.md" || \
+    die "README must document that packaged OpenAI login disables OIDC scopes"
+for scope in "${OAUTH_SCOPES[@]}"; do
+    rg -Fq "$scope" "$ROOT/README.md" || die "README is missing OAuth scope: $scope"
+done
+for client in "${OPENAI_CIMD_CLIENTS[@]}"; do
+    rg -Fq "$client" "$ROOT/README.md" || die "README is missing OpenAI CIMD client: $client"
+done
 jq -e '
     .name == "serpvibe-search-stack"
     and (.version | type == "string" and length > 0)
@@ -80,21 +126,50 @@ for workflow in "${PRODUCTION_WORKFLOWS[@]}"; do
     cp -a "$source_dir" "$PACKAGE/skills/$skill"
 done
 
+for skill in "${STANDALONE_SKILLS[@]}"; do
+    source_dir="$PLUGIN_ROOT/skills/$skill"
+    [[ -f "$source_dir/SKILL.md" ]] || die "missing skill manifest: $source_dir/SKILL.md"
+    manifest_name="$(sed -n 's/^name:[[:space:]]*//p' "$source_dir/SKILL.md" | head -n 1)"
+    [[ "$manifest_name" == "$skill" ]] || die "skill name mismatch for $skill"
+    [[ -f "$source_dir/agents/openai.yaml" ]] || die "missing OpenAI metadata for $skill"
+    cp -a "$source_dir" "$PACKAGE/skills/$skill"
+done
+
 CONTENT_SHA256="$(
     cd "$PACKAGE"
     find . -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum | awk '{print $1}'
 )"
 WORKFLOWS_JSON="$(jq -cn --args '$ARGS.positional' "${PRODUCTION_WORKFLOWS[@]}")"
+OAUTH_REGISTRATIONS_JSON="$(jq -cn --args '$ARGS.positional' "${OAUTH_COMPATIBLE_REGISTRATIONS[@]}")"
+OAUTH_SCOPES_JSON="$(jq -cn --args '$ARGS.positional' "${OAUTH_SCOPES[@]}")"
+OAUTH_BASE_SCOPES_JSON="$(jq -cn --args '$ARGS.positional' "${OAUTH_BASE_SCOPES[@]}")"
+OPENAI_CIMD_CLIENTS_JSON="$(jq -cn --args '$ARGS.positional' "${OPENAI_CIMD_CLIENTS[@]}")"
 jq -n \
     --arg release_id "$RELEASE_ID" \
     --arg content_sha256 "$CONTENT_SHA256" \
     --argjson mcp_contract_version "$MCP_CONTRACT_VERSION" \
     --argjson workflows "$WORKFLOWS_JSON" \
+    --arg resource "$MCP_RESOURCE_URI" \
+    --arg primary_registration "$OAUTH_PRIMARY_REGISTRATION" \
+    --argjson compatible_registrations "$OAUTH_REGISTRATIONS_JSON" \
+    --argjson scopes "$OAUTH_SCOPES_JSON" \
+    --argjson base_scopes "$OAUTH_BASE_SCOPES_JSON" \
+    --argjson openai_cimd_clients "$OPENAI_CIMD_CLIENTS_JSON" \
     '{
         release_id: $release_id,
         content_sha256: $content_sha256,
         mcp_contract_version: $mcp_contract_version,
-        workflows: $workflows
+        workflows: $workflows,
+        oauth: {
+            resource: $resource,
+            primary_client_registration: $primary_registration,
+            compatible_client_registrations: $compatible_registrations,
+            scopes: $scopes,
+            base_scopes: $base_scopes,
+            default_scopes: [],
+            oidc_enabled: false,
+            openai_cimd_clients: $openai_cimd_clients
+        }
     }' \
     >"$PACKAGE/build.json"
 
