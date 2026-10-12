@@ -8,4 +8,3 @@ The live MCP schema defines exact fields. Use these rules when deciding what bel
 - Quality needs a conclusion and check time. Traffic needs a metric, value, unit, source, and observation time. Evidence needs a kind, source URL, concise summary, and observation time.
 - Store observed values only. A failed collection is not a traffic observation; full pages, browser state, credentials, and task history do not belong here.
 - Tags are exact `dimension.value` codes. Only active definitions may be added; archived tags may remain or be removed.
-- Projection changes only the response: `summary` is compact, `standard` adds working detail, and `full` adds traffic, evidence, and deletion fields.

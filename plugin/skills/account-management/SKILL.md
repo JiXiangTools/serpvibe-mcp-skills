@@ -5,43 +5,19 @@ description: Manage website credentials and operate registration, login, or pass
 
 # Account Management
 
-Use only the exact MCP tools `account_read`, `account_write`, and `account_browser`. `account_management` is an internal Workflow ID whose former public tool name is retired; never call it. If it appears in the current tool list, or a read-only call is reported as user-cancelled without an explicit user rejection, the connector or session has stale schema or annotations. Stop without retrying or substituting another tool, refresh or reconnect the MCP, verify the exact current tools, and start a new session. Updating this Skill alone does not refresh tool schemas. Do not use raw Elasticsearch, guessed tool names, a local credential copy, or a general browser tool for passwords.
+Use `account_read`, `account_write`, and `account_browser` through MCP. Read the live schema for exact fields; [tool-contract.json](references/tool-contract.json) is the generated reference. Do not substitute database access, local credential copies, or a general browser tool for password operations.
 
 ## Choose the operation
 
-- `account_read` with `get`: read one known `account_ref`.
-- `account_read` with `list`: find accounts for a URL, optionally narrowed by DigitalHuman.
-- `account_write` with `create`: save a new website account.
-- `account_write` with `update`: change the password or DigitalHuman owner.
-- `account_write` with `delete`: retire a credential while preserving its identity tombstone.
+- `account_read`: `get` by `account_ref`; `list` by `url`, optionally filtered by `digital_human_id`. Both return plaintext passwords.
+- `account_write`: `create` with `url`, `username`, `password`, and `digital_human_id`; `update` the password or owner; `delete` the credential. Send passwords as plaintext MCP fields.
+- For website registration, login, or password changes, use `account_browser` as described in [browser operations](references/mcp-contract.md). Do not read a password just to copy it into another tool.
 
-Use `account_browser` when the requested outcome happens on a website:
+## Call rules
 
-- `start_registration`: generate a password server-side and open the exact registration URL.
-- `start_login`: open the exact login URL for a stored `account_ref`.
-- `start_password_change`: escrow a generated new password and open the settings URL.
-- `observe`: inspect the current page and its redacted interactive elements.
-- `navigate`, `click`, `fill`, `select`: operate the page with a session-unique `action_id`; each is a top-level action.
-- `inject_credentials`: identify the returned username/password element refs; the service injects secrets without returning them.
-- `complete`: call only after the page proves success; this commits the registered or changed credential.
-- `resume`: recreate a lost browser session from durable operation state.
-- `cancel`: close the session and clear an uncommitted generated credential.
-
-Inspect the live tool schema for exact fields. Use [references/tool-contract.json](references/tool-contract.json) only to verify generated schema, defaults, or scopes. Consult [references/mcp-contract.md](references/mcp-contract.md) when identity, mutation, or deletion semantics matter.
-
-## Rules
-
-- Create with `url`, never `platform`. Website identity is the normalized host; scheme, port, path, query, fragment, case, and trailing dot do not distinguish accounts. `www` remains distinct.
-- The unique account identity is normalized host plus normalized username. URL and username are immutable.
-- Send passwords as plaintext MCP fields. The server encrypts storage. Credential reads through `get` and `list` always return plaintext passwords.
-- For website registration, login, or password changes, prefer `account_browser`; do not first read a password and copy it into another tool. `account_browser` has no password input or output.
-- Browser page URLs preserve path and query case. They must remain on the account's normalized host; use only `element_ref` values from the latest snapshot.
-- Do not send `act` or `command`. Use the direct `navigate`, `click`, `fill`, or `select` action with the fields required by that action.
-- Never use `fill` for a password field. Use `inject_credentials`, even if another tool could reveal the password.
-- Treat `navigate`, `click`, `fill`, `select`, `inject_credentials`, and `complete` as external side effects. Never bypass CAPTCHA, email/device verification, or user confirmation.
-- Registration and password change are two-phase operations. Call `complete` only after visible site success. On `reconciliation_required`, re-read the account revision and retry `complete` with that revision; do not generate a second password.
+- Identify the website with `url`, never `platform`. Host case, trailing dot, scheme, port, path, query, and fragment are ignored; `www` remains distinct. Normalized host plus normalized username is unique. `account_ref`, URL, and username are immutable; deletion does not free the identity.
 - Never place a returned password in summaries, logs, tasks, website records, memory, evidence, or `request_id`.
-- Every mutation needs a globally unique `request_id` that is never recycled; reuse it only for the identical retry. `update` and `delete` also need the current revision.
-- A connector-side schema rejection does not authorize a new `request_id` or a substitute action. After refresh, retry the identical request with its original ID; if delivery was ambiguous, inspect current state first.
-- On `conflict`, read current state and reconsider. Do not overwrite blindly.
-- Page observation is evidence, not a transactional guarantee. If the site result is ambiguous, do not call `complete`; keep or cancel the operation and report the uncertainty.
+- `account_write` mutations need a globally unique `request_id`; never recycle it except for the identical retry. `update` and `delete` also need the current `expected_revision`. Browser IDs follow the [browser rules](references/mcp-contract.md).
+- On `revision_conflict`, re-read before deciding. On `request_id_reused`, do not change the ID to force the write. After an ambiguous response or schema rejection, inspect state before retrying; keep the original ID and input for an identical retry.
+- Reads require `account:read`, writes require `account:write`, and browser operations require both. On `insufficient_scope` or `oauth_scope_required`, let the host authorize; if still denied, report and stop. Do not reinstall or loop retries. `digital_human_id` does not grant permissions.
+- For a missing tool or cancellation, report the actual error and stop the affected operation; do not guess another tool name or replay a write whose delivery is unknown.

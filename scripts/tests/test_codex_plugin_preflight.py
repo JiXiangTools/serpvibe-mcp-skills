@@ -52,6 +52,17 @@ class PluginPreflightTests(unittest.TestCase):
         with self.assertRaises(preflight.PreflightError):
             self.validate({})
 
+    def test_rejects_missing_or_extra_skill(self):
+        with self.assertRaisesRegex(preflight.PreflightError, "packaged Skills"):
+            preflight.validate_plugin(self.response(), ["search-stack-mcp"],
+                                      Path("/tmp/candidate/plugin"), ["example:website-management"])
+
+    def test_accepts_exact_skills(self):
+        response = self.response()
+        response["result"]["plugin"]["skills"] = [{"name": "example:website-management"}]
+        preflight.validate_plugin(response, ["search-stack-mcp"], Path("/tmp/candidate/plugin"),
+                                  ["example:website-management"])
+
 
 if __name__ == "__main__":
     unittest.main()

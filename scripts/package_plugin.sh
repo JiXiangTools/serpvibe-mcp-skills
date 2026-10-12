@@ -29,15 +29,22 @@ die() {
     exit 1
 }
 
-[[ $# -le 1 ]] || die "usage: $0 [release-id]"
+FORMAT=portable
+if [[ "${1:-}" == --format ]]; then
+    [[ $# -ge 2 ]] || die "--format requires portable or codex"
+    FORMAT="$2"
+    shift 2
+fi
+[[ "$FORMAT" == portable || "$FORMAT" == codex ]] || die "unknown package format: $FORMAT"
+[[ $# -le 1 ]] || die "usage: $0 [--format portable|codex] [release-id]"
 [[ -f "$PLUGIN_ROOT/plugin.json" ]] || die "missing plugin/plugin.json"
 [[ -f "$PLUGIN_ROOT/mcp.json" ]] || die "missing plugin/mcp.json"
-python3 "$ROOT/scripts/codex_plugin_preflight.py" --repository "$ROOT" >&2 || \
-    die "the installed Codex runtime cannot load the release candidate"
 jq -e \
     --arg resource "$MCP_RESOURCE_URI" \
     --argjson base_scopes "$(jq -cn --args '$ARGS.positional' "${OAUTH_BASE_SCOPES[@]}")" '
-    .mcpServers["search-stack-mcp"].type == "streamable-http"
+    .["$schema"] == "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json"
+    and (.mcpServers | keys) == ["search-stack-mcp"]
+    and .mcpServers["search-stack-mcp"].type == "streamable-http"
     and .mcpServers["search-stack-mcp"].url == $resource
     and .mcpServers["search-stack-mcp"].extensions["com.openai"].auth == {
         type: "oauth",
@@ -62,7 +69,8 @@ for client in "${OPENAI_CIMD_CLIENTS[@]}"; do
     rg -Fq "$client" "$ROOT/README.md" || die "README is missing OpenAI CIMD client: $client"
 done
 jq -e '
-    .name == "serpvibe-search-stack"
+    .["$schema"] == "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json"
+    and .name == "serpvibe-search-stack"
     and (.version | type == "string" and length > 0)
     and (.description | type == "string" and length > 0)
     and (.author.name | type == "string" and length > 0)
@@ -82,6 +90,9 @@ ACTUAL_SKILLS="$(
 
 mkdir -p "$OUTPUT_ROOT"
 DESTINATION="$OUTPUT_ROOT/serpvibe-search-stack-$RELEASE_ID"
+if [[ "$FORMAT" == codex ]]; then
+    DESTINATION="$DESTINATION-codex"
+fi
 [[ ! -e "$DESTINATION" ]] || die "plugin destination already exists: $DESTINATION"
 TEMP_DIR="$(mktemp -d "$OUTPUT_ROOT/.build.XXXXXXXX")"
 
@@ -97,8 +108,12 @@ trap cleanup EXIT
 PACKAGE="$TEMP_DIR/package"
 MCP_CONTRACT_VERSION=""
 mkdir -p "$PACKAGE/skills"
-cp "$PLUGIN_ROOT/plugin.json" "$PACKAGE/plugin.json"
-cp "$PLUGIN_ROOT/mcp.json" "$PACKAGE/mcp.json"
+if [[ "$FORMAT" == portable ]]; then
+    cp "$PLUGIN_ROOT/plugin.json" "$PACKAGE/plugin.json"
+    cp "$PLUGIN_ROOT/mcp.json" "$PACKAGE/mcp.json"
+else
+    python3 "$ROOT/scripts/native_plugin.py" --repository "$ROOT" --output "$PACKAGE"
+fi
 
 for workflow in "${PRODUCTION_WORKFLOWS[@]}"; do
     case "$workflow" in
@@ -134,6 +149,11 @@ for skill in "${STANDALONE_SKILLS[@]}"; do
     [[ -f "$source_dir/agents/openai.yaml" ]] || die "missing OpenAI metadata for $skill"
     cp -a "$source_dir" "$PACKAGE/skills/$skill"
 done
+
+if [[ "$FORMAT" == codex ]]; then
+    python3 "$ROOT/scripts/codex_plugin_preflight.py" --plugin-root "$PACKAGE" >&2 || \
+        die "the installed Codex runtime cannot load the Codex adapter"
+fi
 
 CONTENT_SHA256="$(
     cd "$PACKAGE"

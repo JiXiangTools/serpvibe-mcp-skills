@@ -1,47 +1,30 @@
-# Account behavior
+# Browser operations
 
-Exact actions and fields come from [tool-contract.json](tool-contract.json) or the live MCP schema.
+Use `account_browser`; exact fields are in the live schema or [tool-contract.json](tool-contract.json).
 
-Use `account_read` for `get` and `list`, `account_write` for `create`, `update`,
-and `delete`, and `account_browser` for website operations. `account_management`
-is the internal Workflow ID, not an MCP tool name.
+1. Start with `start_registration` and the exact registration URL, `start_login`
+   for an `account_ref`, or `start_password_change` for an `account_ref` and its
+   current revision. Supply a unique `request_id`; reuse it only for an identical
+   start retry. Registration and password change generate the password for you.
+2. Use the returned `operation_ref` for subsequent calls. Call `observe` for the
+   page and use only `element_ref` values from the latest snapshot.
+3. Call `navigate` with `url`, `click` with `element_ref`, `fill` with
+   `element_ref` and `text`, or `select` with `element_ref` and `value`.
+   These are top-level actions, not `act` or `command`. Each needs a
+   session-unique `action_id`, reused only for the identical retry.
+4. Use `inject_credentials` with the matching username/password element refs.
+   Never `fill` a password field. The tool takes and returns no plaintext password.
+5. Call `complete` only after visible site success; this saves the registered or
+   changed credential. If the result is ambiguous, keep or cancel the operation
+   and report the uncertainty. On `reconciliation_required`, re-read the account
+   and retry `complete` with its current `expected_revision`; do not generate
+   another password.
 
-## Identity and reads
+Use `resume` with `operation_ref` for a lost session; inspect the page before
+repeating an external action. Use `cancel` to close the operation and clear an
+uncommitted generated credential. These calls do not take a new `request_id`.
 
-- Website identity is host-only and shared with `website_management`; it ignores scheme, port, path, query, fragment, host case, and trailing dot. `www` remains distinct.
-- Normalized host plus normalized username is globally unique. `account_ref`, URL, and username are immutable.
-- `get` and URL `list` always return plaintext passwords. Credential reads have one permission and one response contract, without a redaction switch.
-
-## Mutations
-
-- `request_id` is globally unique forever and may be reused only for the identical retry. Changed input returns `rejected / request_id_reused`.
-- Existing-record mutations use revision CAS. A stale revision returns `conflict / revision_conflict`; re-read before deciding.
-- `update` may change only password or `digital_human_id`.
-- `delete` clears the encrypted credential but preserves a permanent identity tombstone.
-
-Passwords are plaintext only across the trusted MCP call; Elasticsearch stores the encrypted envelope. Reads require `account:read`, mutations require `account:write`, and `digital_human_id` is data rather than an authorization principal.
-
-## Server-side website operations
-
-The companion `account_browser` tool performs registration, login, and password
-changes through a server-side nodriver worker. All actions require both
-`account:read` and `account:write`. The bot receives only a redacted interactive-element snapshot
-and opaque `element_ref` values; credential injection has no password argument
-or result.
-
-Start/resume/complete mutations are durable and idempotent by the original
-`request_id`. Individual browser actions use a session-scoped `action_id` and
-cannot provide exactly-once guarantees across a lost external connection.
-Registration and password changes become account records only after the bot
-observes site success and calls `complete`. A revision collision enters
-`reconciliation_required` while retaining the encrypted pending password.
-
-Browser URLs use resource normalization, so path/query case is preserved, while
-all navigation remains on the account's normalized host. CAPTCHA and human
-verification are never bypassed.
-
-Browser operations are direct top-level actions: `navigate` requires `url`,
-`click` requires `element_ref`, `fill` requires `element_ref` plus `text`, and
-`select` requires `element_ref` plus `value`. Each also requires
-`operation_ref` and `action_id`. There is no public `act` action or `command`
-field.
+Keep page paths and query case intact. Navigation must stay on the account's
+normalized host. Navigation, form actions, injection, and completion may change
+the external site; never bypass CAPTCHA, email/device verification, or required
+user confirmation.

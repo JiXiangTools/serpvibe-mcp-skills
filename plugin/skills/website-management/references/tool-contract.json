@@ -1,25 +1,4 @@
 {
-  "architecture": {
-    "browser_executor": "loopback_nodriver_sidecar",
-    "contract_version_signals": [
-      "export_contracts",
-      "initialize_server_info",
-      "x_mcp_contract_version_header"
-    ],
-    "credential_injection": "server_side_only",
-    "dynamic_plugins": false,
-    "mcp_cache_control": "no_store",
-    "runtime": "static_rust_workflows",
-    "schema_change_client_action": "refresh_or_reconnect_then_start_new_session",
-    "supported_clients": [
-      "chatgpt_web",
-      "codex_macos",
-      "codex_linux_cli"
-    ],
-    "tool_partitioning": "permission_and_confirmation_boundary",
-    "transport": "mcp_streamable_http",
-    "writable_truth": "elasticsearch"
-  },
   "authentication": {
     "elasticsearch_auth_or_connection_failure": {
       "code": "workflow_unavailable",
@@ -28,8 +7,10 @@
     },
     "missing_action_scope": {
       "code": "oauth_scope_required",
-      "layer": "tool",
-      "outcome": "forbidden"
+      "layer": "http",
+      "oauth_error": "insufficient_scope",
+      "outcome": "forbidden",
+      "status": 403
     },
     "missing_or_invalid_token": {
       "code": "invalid_token",
@@ -37,7 +18,7 @@
       "status": 401
     }
   },
-  "contract_version": 12,
+  "contract_version": 13,
   "idempotency": {
     "caller_reuse_after_receipt_retention": false,
     "mismatch": {

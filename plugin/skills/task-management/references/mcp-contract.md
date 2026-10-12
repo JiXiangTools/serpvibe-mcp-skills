@@ -25,16 +25,14 @@ For correction, call `task_write` with:
 }
 ```
 
-Replace the example reference, revision, ID, reason, and evidence with current
-facts. Evidence must be nonempty and at most 8192 UTF-8 bytes; reason must be
-nonempty and at most 2000 characters. Optional `values_patch` updates business
-notes without changing dedupe fields. The server stores the supplied evidence;
-the caller must verify its truth. A missing receipt alone is insufficient.
+Use actual values in the example. Evidence must be verified, nonempty, and at
+most 8192 UTF-8 bytes; reason must be nonempty and at most 2000 characters.
+Optional `values_patch` updates notes without changing dedupe fields. A missing
+receipt or duplicate warning alone does not justify correction.
 
 Success returns `record_outcome_corrected` and the corrected Record, with no
 lease. Pass its reference and returned revision to `retry_record` with a new
-request ID and reason. Only `record_reserved` allows execution. The new Record's
-`retry_of` links to the source; historical evidence is retained. A stale revision
+request ID and reason. Only `record_reserved` allows execution. A stale revision
 returns `revision_conflict`; a non-completed source returns `record_not_completed`.
 
 `retry_record` also requires an active parent Task and a free duplicate claim.
@@ -50,10 +48,9 @@ and outcome. Prefer 100–200 per request; use larger batches for small records.
 Results follow input order. Retry identical unconfirmed items with their original
 IDs. Changed input under a used ID returns `request_id_reused`.
 
-Business values live under `record.values`; names such as `status` and `result`
-are business columns and do not replace system fields. Define only needed
-columns, following the live schema's naming rules. Credentials and sessions
-belong in account/browser tools.
+Use `update_record` to change business values under `record.values`; names such
+as `status` and `result` do not replace system fields. Follow the live schema's
+column naming rules.
 
 ## Duplicate identity
 

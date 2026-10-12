@@ -1,10 +1,6 @@
-# Website behavior
+# Website lookup and update rules
 
 Exact actions and fields come from [tool-contract.json](tool-contract.json) or the live MCP schema.
-
-Use `website_read` for `get`, `list`, `list_dimensions`, and `list_tags`. Use
-`website_write` for all catalog and registry mutations. `website_management` is
-the internal Workflow ID, not an MCP tool name.
 
 ## Identity and projections
 
@@ -18,10 +14,4 @@ the internal Workflow ID, not an MCP tool name.
 - `tags_all` requires every code; `tags_any` requires at least one. If both are present, both predicates must hold.
 - `update_tags` validates active definitions, rejects overlapping add/remove codes, and enforces single-value dimensions.
 
-## Consistency
-
-- Before `create`, use `website_read` with `get` as an advisory duplicate lookup for the candidate URL. `website_found` means use the existing Website; `website_not_found` does not reserve the host.
-- `create` is the authoritative write boundary. `conflict / website_exists` means the candidate host resolved to an existing Website, while `invalid / host_already_claimed` means a canonical or supplied alias host is already owned. Inspect the existing Website instead of changing the request or `request_id` and retrying.
-- `request_id` is globally unique forever and may be reused only for the identical retry. Changed input returns `rejected / request_id_reused`.
-- Existing-resource mutations use revision CAS. A stale revision returns `conflict / revision_conflict`; re-read before deciding.
-- Delete is a soft tombstone. Default reads hide deleted websites; an `invalid` exploration status remains active negative knowledge.
+- `delete` hides the website from default reads but retains its identity. Keep `invalid` exploration records instead of deleting them.

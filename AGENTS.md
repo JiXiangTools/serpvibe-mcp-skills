@@ -18,6 +18,18 @@ so review, compatibility, packaging, and release have one source of truth.
   unapproved work under `staging/unpublished-skills/`, and change the plugin
   surface only with the approval required below.
 
+## Search Stack MCP Skill Content (Owner Requirement)
+
+Keep the account, website, and task Skills focused on using MCP: tool/action
+selection, inputs, results, and necessary operational constraints. Keep detailed
+usage references conditional and avoid duplicating them in `SKILL.md`.
+
+Do not include server architecture, implementation explanations, deployment or
+installation instructions, migration history, or speculative error diagnoses
+in these Skill bundles. Keep those in project documentation. Generated Skill
+references must preserve interface fields and behavior without copying server
+architecture; do not alter the public MCP contract to simplify documentation.
+
 ## External Interface Freeze (Owner Requirement)
 
 Externally exposed interfaces are frozen once published. This includes MCP endpoint
