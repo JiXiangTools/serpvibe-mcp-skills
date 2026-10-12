@@ -2,10 +2,9 @@
 
 ## Repository Role
 
-This repository is the central collection and external publication home for
-Skills from all Serpvibe projects. Project repositories continue to own their
-application and runtime code, while reusable Skill source is consolidated here
-so review, compatibility, packaging, and release have one source of truth.
+This repository is the public source and installation home for reusable
+Serpvibe Skills. Project repositories continue to own their application,
+service, connection, authentication, deployment, and runtime code.
 
 - Store cross-project Skill source under `skills/<skill-name>/`. Treat that copy
   as canonical; do not maintain divergent copies in application repositories.
@@ -13,10 +12,11 @@ so review, compatibility, packaging, and release have one source of truth.
   `<project-root>/skills/<skill-name>` directory with a symlink to this
   repository's canonical `skills/<skill-name>` directory. Use project-level
   links only; do not install these development links into `~/.codex/skills`.
-- `plugin/` is a separately installable public surface. Adding a Skill to the
-  root collection does not add it to a plugin automatically. Keep unfinished or
-  unapproved work under `staging/unpublished-skills/`, and change the plugin
-  surface only with the approval required below.
+- The only installable surface in this repository is `skills/<skill-name>/`.
+  Do not add MCP connection manifests, host-specific plugin adapters, server
+  runtime code, or client configuration here.
+- Keep unfinished or unapproved work under `staging/unpublished-skills/`.
+  Publish it only by moving the reviewed source into `skills/<skill-name>/`.
 
 ## Search Stack MCP Skill Content (Owner Requirement)
 
@@ -24,11 +24,12 @@ Keep the account, website, and task Skills focused on using MCP: tool/action
 selection, inputs, results, and necessary operational constraints. Keep detailed
 usage references conditional and avoid duplicating them in `SKILL.md`.
 
-Do not include server architecture, implementation explanations, deployment or
-installation instructions, migration history, or speculative error diagnoses
-in these Skill bundles. Keep those in project documentation. Generated Skill
-references must preserve interface fields and behavior without copying server
-architecture; do not alter the public MCP contract to simplify documentation.
+Do not include server architecture, implementation explanations, deployment,
+MCP connection installation, migration history, or speculative error diagnoses
+in these Skill bundles. Keep those in the owning project documentation.
+Generated Skill references must preserve interface fields and behavior without
+copying server architecture; do not alter the public MCP contract to simplify
+documentation.
 
 ## External Interface Freeze (Owner Requirement)
 
