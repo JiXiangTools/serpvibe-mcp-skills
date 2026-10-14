@@ -41,6 +41,9 @@ connection, starts a server, or copies credentials.
 - `browser-env-manager`: managed browser environments through the Browser
   Environment Manager service. It is published independently and is not part of
   the default Search Stack installation above.
+- `jev`: bounded System One decisions through a locally served Clef model.
+  It is installed separately from the default Search Stack Skills. Local
+  compatibility observations are in [docs/jev-local-compatibility.md](docs/jev-local-compatibility.md).
 
 The three Search Stack business Skills declare the dependency name
 `search-stack-mcp`. The MCP project owns its remote URL, OAuth settings, tool

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Local Clef Decisions"
+  short_description: "Make bounded decisions with local Clef"
+  default_prompt: "Use $jev to make a bounded System One decision with my local Clef model, then interpret its typed answer and uncertainty."
