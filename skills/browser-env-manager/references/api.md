@@ -20,8 +20,9 @@ python scripts/browser_env_manager.py --origin http://127.0.0.1:6001 ready
 
 The helper reads `BROWSER_ENV_MANAGER_TOKEN`, then
 `browser_env_manager__api_token`. Empty values omit control-plane
-authentication. CDP uses the ticket returned in the connection grant. Keep
-tokens, tickets, and grant content out of arguments, URLs, logs, and chat.
+authentication. The shared default CDP uses this same optional Bearer header;
+non-default CDP uses the ticket returned in its connection grant. Keep tokens,
+tickets, and grant content out of arguments, URLs, logs, and chat.
 
 ## CLI
 
@@ -34,15 +35,16 @@ Prefix each subcommand with `python scripts/browser_env_manager.py`.
 | `restart --grant-file <path>` | Restart a persistent environment's browser and replace its grant |
 | `rotate --grant-file <path>` | Rotate a proxied environment and replace its grant |
 
-Normal browser tasks use `acquire` and the returned CDP connection. Lease
-maintenance is automatic; do not add `release` or DELETE as a task-ending step.
+Default browser tasks connect to the fixed shared CDP URL below. Named,
+temporary, and proxy-backed tasks use `acquire` and the returned CDP connection.
+Lease maintenance is automatic; do not add `release` or DELETE as a task-ending step.
 Management commands are documented in [administration.md](administration.md).
 
 `acquire` options:
 
 | Option | Meaning |
 | --- | --- |
-| `--key <key>` | Persistent environment key; omit for `default` |
+| `--key <key>` | Persistent non-default environment key |
 | `--temporary` | Disposable environment; mutually exclusive with `--key` |
 | `--keep-open` | Create a persistent everyday browser; incompatible with `--temporary` |
 | `--client-name <name>` | Printable owner label, at most 128 characters |
@@ -59,10 +61,11 @@ helper's control-plane origin.
 
 ## Environment Selection
 
-- `acquire` selects the persistent `default` environment.
+- `default` is not acquired; connect to its stable shared gateway.
 - `acquire --key <key>` gets or creates a persistent named environment.
 - `acquire --temporary` creates a disposable environment.
-- Each caller acquires a separate lease, even when callers share an environment.
+- `acquire --proxy-provider <provider>` uses that provider's stable default key.
+- Each non-default caller acquires a separate lease, even when callers share an environment.
 
 Keys must match `[A-Za-z0-9][A-Za-z0-9._:@-]{0,127}`. Email addresses are valid
 logical keys. A new named environment without `--proxy-provider` is direct; an
@@ -77,10 +80,54 @@ The mode is saved when the environment is created. Omit the option when reusing
 it; an explicit conflicting `keep_open` value returns `409 lifecycle_policy_mismatch`.
 Change an existing environment through `configure` or PATCH, documented in
 [administration.md](administration.md). Acquire never edits saved configuration.
-The default for new environments is false. Existing environments retain their
+The default for new named environments is false. Existing environments retain their
 saved mode when the field is omitted or null. Normal capacity limits still apply.
 
-## Connection Grant And CDP
+## Shared Default CDP
+
+The default gateway is stable and service-owned:
+
+```text
+ws://127.0.0.1:6001/browser-env-manager/api/v1/environments/default/cdp
+```
+
+For another service origin, preserve its host/port and map `http -> ws` or
+`https -> wss`. The WebSocket handshake lazily creates or starts `default`,
+keeps it configured as direct and always-on, and attaches every caller to the
+same Chrome. It creates no connection lease, grant file, ticket, renewal, or
+release obligation. The service closes an idle socket without closing Chrome.
+
+When API authentication is enabled, pass the token only as an Authorization
+header. This example requires `websockets>=15,<16`:
+
+```python
+import asyncio
+import json
+import os
+
+from websockets.asyncio.client import connect
+
+url = "ws://127.0.0.1:6001/browser-env-manager/api/v1/environments/default/cdp"
+token = os.environ.get("BROWSER_ENV_MANAGER_TOKEN") or os.environ.get(
+    "browser_env_manager__api_token"
+)
+headers = {"Authorization": f"Bearer {token.strip()}"} if token and token.strip() else None
+
+async def get_targets():
+    async with connect(url, additional_headers=headers, origin=None) as cdp:
+        await cdp.send(json.dumps({"id": 1, "method": "Target.getTargets"}))
+        while True:
+            message = json.loads(await asyncio.wait_for(cdp.recv(), timeout=10))
+            if message.get("id") == 1:
+                return message["result"]["targetInfos"]
+
+targets = asyncio.run(get_targets())
+```
+
+Multiple programs may connect concurrently. Each should create or select its
+own target/window and keep its work inside the WebSocket context manager.
+
+## Non-Default Connection Grant And CDP
 
 The helper prints non-secret metadata and the path of the grant file. The full
 grant has this shape:
@@ -167,7 +214,8 @@ Base path: `<origin>/browser-env-manager/api/v1`. Add
 
 | Method | Path | Purpose |
 | --- | --- | --- |
-| POST | `/connections` | Acquire a connection; returns HTTP 201 and a grant |
+| WS | `/environments/default/cdp` | Shared default CDP; optional Bearer auth, no lease/ticket |
+| POST | `/connections` | Acquire a non-default connection; returns HTTP 201 and a grant |
 | GET | `/environments` | List environments |
 | POST | `/connections/{lease_id}/browser-restarts` | Restart browser; no request body |
 | POST | `/connections/{lease_id}/proxy-rotations` | Rotate proxy; no request body |
@@ -188,6 +236,8 @@ Acquisition accepts:
 
 All fields are optional, subject to these combinations:
 
+- omitting all environment selection fields, or setting `environment_key` to
+  `default`, returns `409 default_connection_uses_shared_gateway`;
 - `environment_key` and `temporary: true` are mutually exclusive;
 - `keep_open: true` requires a persistent environment (`temporary` omitted or false);
 - `proxy_provider` is `commercial` or `self_hosted`;

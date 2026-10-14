@@ -1,4 +1,4 @@
 interface:
   display_name: "Browser Environment Manager"
-  short_description: "Operate isolated managed Chrome environments"
-  default_prompt: "Use $browser-env-manager to complete this browser task through a managed Chrome environment."
+  short_description: "Use shared or isolated managed Chrome"
+  default_prompt: "Use $browser-env-manager to connect to the shared managed default Chrome or acquire an isolated non-default environment for this browser task."

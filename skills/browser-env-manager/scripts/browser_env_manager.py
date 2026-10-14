@@ -218,6 +218,16 @@ def _print(value: dict[str, Any]) -> None:
 def _acquire(args: argparse.Namespace, origin: str) -> None:
     if args.temporary and args.keep_open:
         raise ClientError("--keep-open requires a persistent environment")
+    if (
+        args.key is None
+        and not args.temporary
+        and args.proxy_provider is None
+    ):
+        raise ClientError(
+            "default does not use acquire; connect to "
+            f"{origin.replace('https://', 'wss://').replace('http://', 'ws://')}"
+            f"{MOUNT_PATH}/api/v1/environments/default/cdp"
+        )
     payload: dict[str, Any] = {"client_name": _client_name(args.client_name)}
     if args.keep_open is not None:
         payload["keep_open"] = args.keep_open
@@ -366,7 +376,10 @@ def _parser() -> argparse.ArgumentParser:
 
     commands.add_parser("ready", help="Check the PZ host readiness endpoint")
 
-    acquire = commands.add_parser("acquire", help="Acquire a browser connection")
+    acquire = commands.add_parser(
+        "acquire",
+        help="Acquire a named, temporary, or proxy-backed browser connection",
+    )
     mode = acquire.add_mutually_exclusive_group()
     mode.add_argument("--key", help="Stable persistent environment key")
     mode.add_argument("--temporary", action="store_true", help="Disposable environment")

@@ -1,6 +1,6 @@
 ---
 name: browser-env-manager
-description: Acquire and use managed Chrome environments through the Browser Environment Manager HTTP/CDP service. Use for default, named, temporary, or proxy-backed sessions, environment discovery, browser restarts, proxy rotation, and cleanup.
+description: Connect to the shared default Chrome or acquire named, temporary, and proxy-backed Chrome environments through the Browser Environment Manager HTTP/CDP service. Use for browser sessions, environment discovery, browser restarts, proxy rotation, and cleanup.
 ---
 
 # Browser Environment Manager
@@ -26,10 +26,20 @@ example. This starts the local service; a remote origin is managed on its host.
 
 ## Standard Use
 
-1. Acquire a CDP connection for this caller; choose one:
+1. For the shared local `default`, connect directly to the stable managed gateway:
+
+   ```text
+   ws://127.0.0.1:6001/browser-env-manager/api/v1/environments/default/cdp
+   ```
+
+   Do not call `acquire` for `default`. It has no caller-owned lease, ticket,
+   renewal, or release step. Multiple clients may connect concurrently. When
+   `browser_env_manager__api_token` is non-empty, send it as
+   `Authorization: Bearer <token>` in the WebSocket handshake; otherwise send
+   no authentication header.
+2. For a named, temporary, or proxy-backed environment, acquire one connection:
 
    ```bash
-   python scripts/browser_env_manager.py acquire
    python scripts/browser_env_manager.py acquire --key account@example.com --client-name my-task
    python scripts/browser_env_manager.py acquire --temporary
    python scripts/browser_env_manager.py acquire --key daily-commercial --proxy-provider commercial --keep-open
@@ -37,7 +47,7 @@ example. This starts the local service; a remote origin is managed on its host.
 
    The helper defaults to `http://127.0.0.1:6001` and prints the path of a
    private grant file.
-2. Read that grant, then connect to its `websocket_url` with every entry in
+3. Read that grant, then connect to its `websocket_url` with every entry in
    `websocket_headers`. Perform browser work inside the CDP client's connection
    context manager (see the example in [api.md](references/api.md)). No separate
    lease maintenance or release command is part of normal browser work.
@@ -71,10 +81,11 @@ replacement intent. With `--grant-file`, reload the replaced grant and connect
 using its new headers. With `--key`, no CDP connection is required or issued.
 Browser tasks do not call Proxy Manager separately.
 
-Each caller acquires its own connection. Use the service-provided CDP
-connection rather than launching another Chrome. Never expose grant files,
-tokens, or tickets in URLs, logs, command arguments, or chat. Delete a named
-environment only when the user explicitly requests deletion.
+Every non-default caller acquires its own connection; default callers share the
+stable service gateway. Always use the service-provided CDP endpoint rather than
+launching another Chrome. Never expose grant files, tokens, or tickets in URLs,
+logs, command arguments, or chat. Delete a named environment only when the user
+explicitly requests deletion.
 
 Read [api.md](references/api.md) for connection options, request/response fields,
 direct HTTP/CDP integration, and errors. For proxy acquisition or rotation, also

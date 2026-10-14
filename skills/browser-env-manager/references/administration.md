@@ -1,7 +1,8 @@
 # Service Administration
 
-Use these commands only for an explicit administration task. Normal browser
-work uses `acquire` and CDP as described in [api.md](api.md).
+Use these commands only for an explicit administration task. Normal default
+browser work uses the fixed shared CDP gateway; non-default work uses `acquire`
+as described in [api.md](api.md).
 
 Prefix commands with `python scripts/browser_env_manager.py` from the skill
 directory. Address and authentication options are the same as in api.md.
@@ -58,7 +59,8 @@ and current state; the helper prints it. A failed startup can leave the new
 configuration saved with the browser stopped.
 
 Create/show/configure/start/stop/key-based restart and rotation do not issue a
-CDP grant. Use acquire when a CDP connection is wanted. Existing grant-based
+CDP grant. Connect directly to the stable gateway for `default`; use acquire
+when a non-default CDP connection is wanted. Existing grant-based
 restart/rotation remain supported. No rename, renew, arbitrary Chrome-argument,
 or HTTP page-action endpoint is provided.
 
