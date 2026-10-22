@@ -21,6 +21,10 @@ not establish a logged-in session. When the task needs login, use `start_login`
 for the saved `account_ref`, verify the site's logged-in state, and continue the
 requested work with supported tools.
 
+When later work must use a particular existing server-side browser environment,
+pass its `environment_key` in the start action. See the
+[session continuity rules](references/mcp-contract.md#login-and-session-continuity).
+
 For email verification, retrieve the matching code or link from the supplied,
 authorized mailbox and complete verification yourself. Follow the
 [browser operations](references/mcp-contract.md) for verification and session

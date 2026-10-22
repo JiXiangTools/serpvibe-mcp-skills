@@ -40,7 +40,20 @@ authorization when the available authorized tools cannot complete the step.
 
 ## Login and session continuity
 
-Use `resume` with `operation_ref` for a lost, still-open operation; inspect the
+`start_registration`, `start_login`, and `start_password_change` accept optional
+`environment_key`, for example `"environment_key": "account@example.com"`.
+Use the key of the existing, running server-side browser environment that will
+perform the subsequent work. It does not select a browser on a different
+computer. Credentials are still injected by `inject_credentials`.
+
+With a key, `complete` and `cancel` close only this operation's page and
+connection; the shared browser and its saved login state remain. Continue
+through another authorized connection to that same environment. An unavailable
+environment is rejected; do not silently switch environments. Keep the same key
+when retrying the same start request. `resume` retains the original binding.
+
+Without a key, the operation uses its existing private-browser behavior:
+use `resume` with `operation_ref` for a lost, still-open operation; inspect the
 page before repeating an external action. A completed operation cannot be
 resumed: `complete` closes its browser session. If further work needs login,
 start a new `start_login` with the saved `account_ref` and a new `request_id`,

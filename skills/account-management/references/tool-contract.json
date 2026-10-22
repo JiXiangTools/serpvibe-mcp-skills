@@ -18,7 +18,7 @@
       "status": 401
     }
   },
-  "contract_version": 13,
+  "contract_version": 14,
   "idempotency": {
     "caller_reuse_after_receipt_retention": false,
     "mismatch": {
@@ -353,6 +353,14 @@
                 "digital_human_id": {
                   "type": "string"
                 },
+                "environment_key": {
+                  "default": null,
+                  "description": "Existing server-side Browser Environment Manager key. Omit to use the account's private browser.",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
                 "password_policy": {
                   "$ref": "#/$defs/PasswordPolicy"
                 },
@@ -386,6 +394,14 @@
                   "const": "start_login",
                   "type": "string"
                 },
+                "environment_key": {
+                  "default": null,
+                  "description": "Existing server-side Browser Environment Manager key. Omit to use the account's private browser.",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
                 "request_id": {
                   "type": "string"
                 },
@@ -414,6 +430,14 @@
                 "action": {
                   "const": "start_password_change",
                   "type": "string"
+                },
+                "environment_key": {
+                  "default": null,
+                  "description": "Existing server-side Browser Environment Manager key. Omit to use the account's private browser.",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 },
                 "expected_revision": {
                   "format": "uint64",
