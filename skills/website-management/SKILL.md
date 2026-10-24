@@ -12,7 +12,7 @@ Use `website_read` and `website_write` through MCP, not database access or a loc
 - `website_read`: `get` by canonical or alias `url`; `list` by exploration status or tags; `list_dimensions` and `list_tags` for available tag codes.
 - `website_write`: `create`, `update`, `update_tags`, or `delete` a website; use dimension/tag actions to maintain the registry.
 
-Read [update and lookup rules](references/mcp-contract.md) for patches, tag filters, and projections; read [field rules](references/data-model.md) before writing aliases, exploration, quality, traffic, or evidence.
+Read [update and lookup rules](references/mcp-contract.md) for patches and projections, and its [controlled tag rules](references/mcp-contract.md#controlled-tags) before choosing, creating, applying, or filtering tags. Read [field rules](references/data-model.md) before writing aliases, exploration, quality, traffic, or evidence.
 
 ## Call rules
 
