@@ -41,6 +41,12 @@ connection, starts a server, or copies credentials.
 - `browser-env-manager`: managed browser environments through the Browser
   Environment Manager service. It is published independently and is not part of
   the default Search Stack installation above.
+- `browser-challenge-solver`: resolve supported CAPTCHA challenges in an existing
+  managed browser tab through the independent Browser Challenge Solver service.
+  Install separately with `$skill-installer` from
+  `JiXiangTools/serpvibe-mcp-skills`, path `skills/browser-challenge-solver`.
+  Requires a configured, running solver service; provider credentials stay on
+  that service. It is not part of the default Search Stack installation.
 - `jev`: bounded System One decisions through a locally served Clef model.
   It is installed separately from the default Search Stack Skills. Local
   compatibility observations are in [docs/jev-local-compatibility.md](docs/jev-local-compatibility.md).

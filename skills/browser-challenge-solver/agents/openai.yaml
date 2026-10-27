@@ -1,0 +1,4 @@
+interface:
+  display_name: "Browser Challenge Solver"
+  short_description: "Resolve verification in an existing managed browser tab"
+  default_prompt: "Use $browser-challenge-solver to resolve the challenge in my current browser tab and resume the authorized task."
