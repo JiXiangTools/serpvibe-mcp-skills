@@ -67,3 +67,21 @@ limitation instead of saying that this Skill requires manual handoff.
 
 Use `cancel` to close an operation and clear an uncommitted generated
 credential. `resume` and `cancel` do not take a new `request_id`.
+
+## Interrupted operations
+
+`unavailable` with `workflow_unavailable` or `browser_workflow_unavailable` is a
+runtime failure, not an account authorization denial. Keep the original
+`operation_ref`, `request_id`, inputs, and environment binding. For an existing
+operation, use `observe`, or `resume` if needed, to inspect the current page before
+deciding what remains to do. A managed connection can recover the original page
+while that page and environment are still available; do not switch environments
+or restart a stopped browser to force recovery.
+
+If a click, navigation, fill, or selection may already have run, do not give it a
+new `action_id` to force another attempt. An identical retry whose outcome is
+unknown remains unavailable rather than executing twice. Verify visible state;
+if it is still unclear or recovery remains unavailable, report the specific
+blocker and preserve the operation. Do not loop retries or call `complete`
+without confirmed site success. Actual scope failures retain the authorization
+handling in `SKILL.md`.
